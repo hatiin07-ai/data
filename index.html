@@ -26,21 +26,30 @@
   }
   h1,h2,.month-name{font-family:'Jua', sans-serif; font-weight:400;}
 
-  .top{ text-align:center; margin-bottom:30px; }
-  .top h1{ font-size:30px; margin:0; }
+  .top{ text-align:center; margin-bottom:26px; }
+  .top h1{ font-size:32px; margin:0; }
 
   .chip-legend{
-    display:flex; justify-content:center; gap:18px; margin:0 0 30px;
-    font-size:11.5px; color:var(--ink-soft);
+    display:flex; justify-content:center; gap:18px; margin:0 0 22px;
+    font-size:13px; color:var(--ink-soft);
   }
   .chip-legend span{ display:flex; align-items:center; gap:5px; }
+
+  .tabs{ display:flex; justify-content:center; gap:10px; margin:0 0 26px; }
+  .tab-link{
+    font-family:'Jua', sans-serif; font-size:14px; text-decoration:none;
+    color:var(--ink-soft); background:var(--card); border:1px solid var(--line);
+    padding:10px 20px; border-radius:20px; transition:all .15s ease;
+  }
+  .tab-link:hover{ background:#f2ece3; }
+  .tab-link.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
 
   .section-title{
     display:flex; align-items:baseline; gap:10px;
     margin:0 0 16px;
   }
-  .section-title h2{ font-size:20px; margin:0; }
-  .section-title .sub{ font-size:12px; color:var(--ink-soft); }
+  .section-title h2{ font-size:21px; margin:0; }
+  .section-title .sub{ font-size:13px; color:var(--ink-soft); }
   .section-title::after{
     content:""; flex:1; height:1px; background:var(--line);
   }
@@ -50,17 +59,17 @@
     margin-bottom:14px;
   }
   .pager-btn{
-    width:38px; height:38px; border-radius:50%; border:1px solid var(--line);
-    background:var(--card); color:var(--ink); font-size:20px; line-height:1;
+    width:42px; height:42px; border-radius:50%; border:1px solid var(--line);
+    background:var(--card); color:var(--ink); font-size:22px; line-height:1;
     cursor:pointer; display:flex; align-items:center; justify-content:center;
     transition:background .15s ease;
   }
   .pager-btn:hover{ background:#f2ece3; }
-  .pager-label{ display:flex; align-items:center; gap:10px; font-family:'Jua', sans-serif; font-size:22px; min-width:170px; justify-content:center; }
+  .pager-label{ display:flex; align-items:center; gap:10px; font-family:'Jua', sans-serif; font-size:24px; min-width:180px; justify-content:center; }
   .today-btn{
-    font-family:'Gowun Dodum', sans-serif; font-size:11.5px; color:var(--ink-soft);
+    font-family:'Gowun Dodum', sans-serif; font-size:12.5px; color:var(--ink-soft);
     background:var(--card); border:1px solid var(--line); border-radius:20px;
-    padding:4px 10px; cursor:pointer;
+    padding:5px 12px; cursor:pointer;
   }
   .today-btn:hover{ background:#f2ece3; }
 
@@ -69,33 +78,49 @@
     padding:18px 20px 20px; margin-bottom:16px;
   }
   .month-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:12px; }
-  .month-name{ font-size:18px; }
-  .month-count{ font-size:12px; color:var(--ink-soft); }
+  .month-name{ font-size:20px; }
+  .month-count{ font-size:13px; color:var(--ink-soft); }
 
   .dow-row, .cal-grid{
-    display:grid; grid-template-columns:repeat(7,1fr); gap:4px;
+    display:grid; grid-template-columns:repeat(7,1fr); gap:5px;
   }
   .dow-row{ margin-bottom:6px; }
-  .dow{ text-align:center; font-size:11px; color:var(--ink-soft); }
+  .dow{ text-align:center; font-size:13px; color:var(--ink-soft); }
   .dow.sun{ color:#d9686f; } .dow.sat{ color:#4f8ef7; }
 
   .cell{
-    min-height:56px; border-radius:9px; padding:4px 4px 5px;
+    min-height:78px; border-radius:9px; padding:5px 5px 6px;
     background:#faf8f4; position:relative;
   }
   .cell.empty{ background:transparent; }
-  .cell .d{ font-size:10px; color:var(--ink-soft); }
+  .cell .d{ font-size:12px; color:var(--ink-soft); }
   .cell.has-event{ background:#fffaf3; box-shadow:inset 0 0 0 1px var(--line); }
-  .cell.today .d{ color:#fff; background:var(--ink); border-radius:50%; padding:1px 5px; }
+  .cell.today .d{ color:#fff; background:var(--ink); border-radius:50%; padding:1px 6px; }
 
   .chip{
-    margin-top:3px; font-size:9.5px; line-height:1.25;
-    padding:2px 5px; border-radius:20px; color:#fff;
-    display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    margin-top:3px; font-size:11.5px; line-height:1.3;
+    padding:3px 6px; border-radius:10px; color:#fff;
+    display:block; white-space:normal; word-break:keep-all; overflow-wrap:break-word;
   }
   .chip.range{ box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.7); }
 
-  .note{ font-size:11.5px; color:var(--ink-soft); margin-top:14px; line-height:1.6; text-align:center; }
+  .week-table{ width:100%; border-collapse:separate; border-spacing:0 7px; font-size:13px; }
+  .week-table th{ font-size:12.5px; color:var(--ink-soft); font-weight:400; padding-bottom:6px; }
+  .week-table th:first-child, .week-table td:first-child{ text-align:left; width:64px; }
+  .week-table td{ text-align:center; vertical-align:middle; padding:3px; }
+  .name-cell{ display:flex; align-items:center; gap:6px; font-size:14px; }
+  .sched-chip{
+    display:inline-block; min-width:56px; padding:6px 5px; border-radius:10px;
+    font-size:12px; color:#fff; line-height:1.2;
+  }
+  .sched-chip.rest{ background:var(--line); color:var(--ink-soft); }
+  .sched-chip.none{ background:transparent; color:#c8c0b6; font-size:13px; }
+  .row-wrap{ background:var(--card); }
+  .row-wrap td{ border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+  .row-wrap td:first-child{ border-left:1px solid var(--line); border-radius:12px 0 0 12px; }
+  .row-wrap td:last-child{ border-right:1px solid var(--line); border-radius:0 12px 12px 0; }
+
+  .note{ font-size:12.5px; color:var(--ink-soft); margin-top:14px; line-height:1.6; text-align:center; }
   .loading{ text-align:center; color:var(--ink-soft); font-size:13px; padding:40px 0; }
 </style>
 </head>
@@ -110,7 +135,12 @@
     <span>🧳 기간 일정(휴가 등)</span>
   </div>
 
-  <div class="section-title">
+  <nav class="tabs">
+    <a href="#cal-section" class="tab-link active" data-target="cal-section">🎂 기념일 캘린더</a>
+    <a href="#sched-section" class="tab-link" data-target="sched-section">📡 방송 시간표</a>
+  </nav>
+
+  <div class="section-title" id="cal-section">
     <h2>🎂 기념일 캘린더</h2>
     <span class="sub">생일 · 데뷔 주년</span>
   </div>
@@ -124,6 +154,22 @@
   </div>
   <div id="months"><div class="loading">불러오는 중…</div></div>
 
+  <div class="section-title" id="sched-section">
+    <h2>📡 주간 방송 시간표</h2>
+    <span class="sub">정규 방송 · 휴방</span>
+  </div>
+  <div class="month-block">
+    <table class="week-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th><th>일</th>
+        </tr>
+      </thead>
+      <tbody id="weekBody"><tr><td colspan="8" class="loading">불러오는 중…</td></tr></tbody>
+    </table>
+  </div>
+
 <script src="js/supabase-config.js"></script>
 <script>
 const DOW = ['월','화','수','목','금','토','일'];
@@ -133,6 +179,8 @@ let cur = { year: today.getFullYear(), month: today.getMonth() + 1 };
 let STREAMERS = {};
 let SPECIAL_DAYS = [];
 let RANGE_EVENTS = [];
+let WEEKLY = [];
+const WEEKDAYS = ['월','화','수','목','금','토','일'];
 
 function daysInMonth(y,m){ return new Date(y, m, 0).getDate(); }
 function firstDowMon0(y,m){
@@ -202,24 +250,58 @@ document.getElementById('todayBtn').addEventListener('click', () => {
   renderMonths();
 });
 
+function renderWeek(){
+  const streamers = Object.values(STREAMERS);
+  const body = document.getElementById('weekBody');
+  body.innerHTML = streamers.map(s => {
+    const cells = WEEKDAYS.map((_, wd) => {
+      const row = WEEKLY.find(w => w.streamer_id === s.id && w.weekday === wd);
+      if(!row) return `<td><span class="sched-chip none">-</span></td>`;
+      if(row.is_rest) return `<td><span class="sched-chip rest">휴방</span></td>`;
+      const t = row.time ? row.time.slice(0,5) : '-';
+      return `<td><span class="sched-chip" style="background:${s.color}">${t}</span></td>`;
+    }).join('');
+    return `<tr class="row-wrap">
+      <td><span class="name-cell"><span style="width:10px;height:10px;border-radius:50%;background:${s.color};display:inline-block;flex:none"></span>${s.name}</span></td>
+      ${cells}
+    </tr>`;
+  }).join('');
+}
+
 async function loadData(){
   const sb = initSupabase();
-  const [{ data: streamers }, { data: days }, { data: ranges }] = await Promise.all([
+  const [{ data: streamers }, { data: days }, { data: ranges }, { data: weekly }] = await Promise.all([
     sb.from('streamers').select('*').order('sort_order'),
     sb.from('special_days').select('*'),
-    sb.from('range_events').select('*')
+    sb.from('range_events').select('*'),
+    sb.from('weekly_schedule').select('*')
   ]);
   STREAMERS = {};
   (streamers || []).forEach(s => { STREAMERS[s.id] = s; });
   SPECIAL_DAYS = days || [];
   RANGE_EVENTS = ranges || [];
+  WEEKLY = weekly || [];
   renderMonths();
+  renderWeek();
 }
 
 loadData().catch(err => {
   document.getElementById('months').innerHTML = '<div class="note">데이터를 불러오지 못했어요.</div>';
   console.error(err);
 });
+
+const tabLinks = document.querySelectorAll('.tab-link');
+const tabSections = Array.from(tabLinks).map(a => document.getElementById(a.dataset.target));
+function setActiveTab(id){
+  tabLinks.forEach(a => a.classList.toggle('active', a.dataset.target === id));
+}
+tabLinks.forEach(a => a.addEventListener('click', () => setActiveTab(a.dataset.target)));
+window.addEventListener('scroll', () => {
+  const y = window.scrollY + 120;
+  let current = tabSections[0].id;
+  tabSections.forEach(sec => { if(sec.offsetTop <= y) current = sec.id; });
+  setActiveTab(current);
+}, { passive:true });
 </script>
 </body>
 </html>
