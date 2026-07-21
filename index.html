@@ -27,21 +27,10 @@
   h1,h2,.month-name{font-family:'Jua', sans-serif; font-weight:400;}
 
   .top{ text-align:center; margin-bottom:30px; }
-  .eyebrow{ font-size:13px; letter-spacing:.14em; color:var(--ink-soft); margin-bottom:6px; }
-  .top h1{ font-size:30px; margin:0 0 8px; }
-  .top p{ font-size:14px; color:var(--ink-soft); margin:0; }
-
-  .legend{
-    display:flex; flex-wrap:wrap; gap:8px 14px;
-    justify-content:center;
-    padding:16px 18px; margin-bottom:34px;
-    background:var(--card); border:1px solid var(--line); border-radius:16px;
-  }
-  .legend-item{ display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ink); }
-  .dot{ width:10px; height:10px; border-radius:50%; flex:none; }
+  .top h1{ font-size:30px; margin:0; }
 
   .chip-legend{
-    display:flex; justify-content:center; gap:18px; margin:-20px 0 30px;
+    display:flex; justify-content:center; gap:18px; margin:0 0 30px;
     font-size:11.5px; color:var(--ink-soft);
   }
   .chip-legend span{ display:flex; align-items:center; gap:5px; }
@@ -107,19 +96,15 @@
   .chip.range{ box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.7); }
 
   .note{ font-size:11.5px; color:var(--ink-soft); margin-top:14px; line-height:1.6; text-align:center; }
-  footer{ text-align:center; margin-top:60px; font-size:12px; color:var(--ink-soft); }
   .loading{ text-align:center; color:var(--ink-soft); font-size:13px; padding:40px 0; }
 </style>
 </head>
 <body>
 
   <div class="top">
-    <div class="eyebrow">ARCHITECT CREATIVE · VTUBER SCHEDULE HUB</div>
     <h1>버추얼 연간 캘린더</h1>
-    <p>생일 · 데뷔 주년을 한눈에</p>
   </div>
 
-  <div class="legend" id="legend"><div class="loading">불러오는 중…</div></div>
   <div class="chip-legend">
     <span>🎂🎉 생일·주년</span>
     <span>🧳 기간 일정(휴가 등)</span>
@@ -139,8 +124,6 @@
   </div>
   <div id="months"><div class="loading">불러오는 중…</div></div>
 
-  <footer>© 아키텍트 크리에이티브 · profile@soop.info</footer>
-
 <script src="js/supabase-config.js"></script>
 <script>
 const DOW = ['월','화','수','목','금','토','일'];
@@ -155,13 +138,6 @@ function daysInMonth(y,m){ return new Date(y, m, 0).getDate(); }
 function firstDowMon0(y,m){
   const jsDow = new Date(y, m-1, 1).getDay();
   return (jsDow + 6) % 7;
-}
-
-function renderLegend(){
-  const el = document.getElementById('legend');
-  el.innerHTML = Object.values(STREAMERS).map(s =>
-    `<span class="legend-item"><span class="dot" style="background:${s.color}"></span>${s.name}</span>`
-  ).join('');
 }
 
 function renderMonths(){
@@ -184,7 +160,7 @@ function renderMonths(){
     const chips = dayEvents.map(e => {
       const s = STREAMERS[e.streamer_id] || { name:'?', color:'#999' };
       const icon = e.type === 'birthday' ? '🎂' : '🎉';
-      return `<span class="chip" style="background:${s.color}">${icon} ${s.name}</span>`;
+      return `<span class="chip" style="background:${s.color}">${icon} ${e.label || s.name}</span>`;
     }).join('') + dayRanges.map(r => {
       const s = STREAMERS[r.streamer_id] || { name:'?', color:'#999' };
       return `<span class="chip range" style="background:${s.color}">🧳 ${s.name} ${r.label}</span>`;
@@ -237,12 +213,11 @@ async function loadData(){
   (streamers || []).forEach(s => { STREAMERS[s.id] = s; });
   SPECIAL_DAYS = days || [];
   RANGE_EVENTS = ranges || [];
-  renderLegend();
   renderMonths();
 }
 
 loadData().catch(err => {
-  document.getElementById('legend').innerHTML = '<div class="note">데이터를 불러오지 못했어요.</div>';
+  document.getElementById('months').innerHTML = '<div class="note">데이터를 불러오지 못했어요.</div>';
   console.error(err);
 });
 </script>

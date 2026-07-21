@@ -22,8 +22,7 @@ insert into public.streamers (id, name, color, sort_order) values
   ('kachu',    '카츄',  '#f2a93b', 5),
   ('yami',     '야미',  '#4f8ef7', 6),
   ('momong',   '모몽',  '#4fbf7a', 7),
-  ('nyanya',   '냔냐',  '#f2895b', 8),
-  ('mulchoco', '물초코', '#a9744f', 9)
+  ('nyanya',   '냔냐',  '#f2895b', 8)
 on conflict (id) do nothing;
 
 -- 2) 기념일 (생일 · 데뷔 주년)
@@ -44,7 +43,6 @@ create policy "public read special_days" on public.special_days for select using
 create policy "auth all special_days" on public.special_days for all to authenticated using (true) with check (true);
 
 insert into public.special_days (streamer_id, month, day, type, label) values
-  ('mulchoco', 1, 1,  'birthday', '물초코 생일'),
   ('nyanya',   1, 24, 'anniv',    '냔냐 주년'),
   ('kachu',    2, 19, 'anniv',    '카츄 주년'),
   ('yami',     3, 12, 'anniv',    '야미 주년'),
@@ -102,3 +100,9 @@ drop policy if exists "public read range_events" on public.range_events;
 drop policy if exists "auth all range_events" on public.range_events;
 create policy "public read range_events" on public.range_events for select using (true);
 create policy "auth all range_events" on public.range_events for all to authenticated using (true) with check (true);
+
+-- 5) (기존에 이미 실행했었다면) 물초코 데이터 정리
+delete from public.special_days where streamer_id = 'mulchoco';
+delete from public.weekly_schedule where streamer_id = 'mulchoco';
+delete from public.range_events where streamer_id = 'mulchoco';
+delete from public.streamers where id = 'mulchoco';
