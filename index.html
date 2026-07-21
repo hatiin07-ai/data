@@ -227,9 +227,9 @@ function renderMonths(){
     }).join('') + dayRanges.map(r => {
       if(r.streamer_id){
         const s = STREAMERS[r.streamer_id] || { name:'?', color:'#999' };
-        return `<span class="chip range" style="background:${lighten(s.color)}"><span class="l1">🧳 ${s.name}</span><span class="l2">${r.label}</span></span>`;
+        return `<span class="chip range" style="background:${lighten(s.color)}"><span class="l1">${s.name}</span><span class="l2">${r.label}</span></span>`;
       }
-      return `<span class="chip range" style="background:${lighten('#8a8578')}"><span class="l1">🎪 ${r.custom_name || '기간 일정'}</span><span class="l2">${r.label}</span></span>`;
+      return `<span class="chip range" style="background:${lighten('#8a8578')}"><span class="l1">${r.custom_name || '기간 일정'}</span><span class="l2">${r.label}</span></span>`;
     }).join('');
     cells += `<div class="cell${hasEvent?' has-event':''}${isToday?' today':''}"><span class="d">${day}</span>${chips}</div>`;
   }
