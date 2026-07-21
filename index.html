@@ -26,19 +26,13 @@
   h1,h2,.month-name{font-family:'Jua', sans-serif; font-weight:400;}
 
   .top{ text-align:center; margin-bottom:26px; }
-  .top h1{ font-size:32px; margin:0; }
-
-  .chip-legend{
-    display:flex; justify-content:center; gap:18px; margin:0 0 22px;
-    font-size:13px; color:var(--ink-soft);
-  }
-  .chip-legend span{ display:flex; align-items:center; gap:5px; }
+  .top h1{ font-size:34px; margin:0; }
 
   .tabs{ display:flex; justify-content:center; gap:10px; margin:0 0 26px; }
   .tab-link{
-    font-family:'Jua', sans-serif; font-size:14px; text-decoration:none;
+    font-family:'Jua', sans-serif; font-size:16px; text-decoration:none;
     color:var(--ink-soft); background:var(--card); border:1px solid var(--line);
-    padding:10px 20px; border-radius:20px; transition:all .15s ease;
+    padding:11px 22px; border-radius:20px; transition:all .15s ease;
     cursor:pointer; -webkit-appearance:none; appearance:none;
   }
   .tab-link:hover{ background:#f2ece3; }
@@ -51,91 +45,44 @@
     display:flex; align-items:baseline; gap:10px;
     margin:0 0 16px;
   }
-  .section-title h2{ font-size:21px; margin:0; }
-  .section-title .sub{ font-size:13px; color:var(--ink-soft); }
+  .section-title h2{ font-size:24px; margin:0; }
+  .section-title .sub{ font-size:15px; color:var(--ink-soft); }
   .section-title::after{
     content:""; flex:1; height:1px; background:var(--line);
   }
-
-  .pager{
-    display:flex; align-items:center; justify-content:center; gap:22px;
-    margin-bottom:14px;
-  }
-  .pager-btn{
-    width:42px; height:42px; border-radius:50%; border:1px solid var(--line);
-    background:var(--card); color:var(--ink); font-size:22px; line-height:1;
-    cursor:pointer; display:flex; align-items:center; justify-content:center;
-    transition:background .15s ease;
-  }
-  .pager-btn:hover{ background:#f2ece3; }
-  .pager-label{ display:flex; align-items:center; gap:10px; font-family:'Jua', sans-serif; font-size:24px; min-width:180px; justify-content:center; }
-  .today-btn{
-    font-family:'Gowun Dodum', sans-serif; font-size:12.5px; color:var(--ink-soft);
-    background:var(--card); border:1px solid var(--line); border-radius:20px;
-    padding:5px 12px; cursor:pointer;
-  }
-  .today-btn:hover{ background:#f2ece3; }
 
   .month-block{
     background:var(--card); border:1px solid var(--line); border-radius:18px;
     padding:18px 20px 20px; margin-bottom:16px;
   }
-  .month-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:12px; }
-  .month-name{ font-size:20px; }
-  .month-count{ font-size:13px; color:var(--ink-soft); }
 
-  .dow-row, .cal-grid{
-    display:grid; grid-template-columns:repeat(7,1fr); gap:5px;
-  }
-  .dow-row{ margin-bottom:6px; }
-  .dow{ text-align:center; font-size:13px; color:var(--ink-soft); }
-  .dow.sun{ color:#d9686f; } .dow.sat{ color:#4f8ef7; }
-
-  .cell{
-    min-height:132px; border-radius:9px; padding:5px 5px 6px;
-    background:#faf8f4; position:relative;
-  }
-  .cell.empty{ background:transparent; }
-  .cell .d{ font-size:12px; color:var(--ink-soft); }
-  .cell.has-event{ background:#fffaf3; box-shadow:inset 0 0 0 1px var(--line); }
-  .cell.today .d{ color:#fff; background:var(--ink); border-radius:50%; padding:1px 6px; }
-
-  .chip{
-    margin-top:5px; font-size:19.5px; line-height:1.3;
-    padding:5px 7px; border-radius:10px; color:var(--ink);
-    display:block; text-align:center;
-  }
-  .chip .l1{ display:block; font-weight:500; }
-  .chip .l2{ display:block; font-size:17px; opacity:.75; }
-  .chip.range{ box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.8); }
-
-  .week-table{ width:100%; border-collapse:separate; border-spacing:0 7px; font-size:13px; }
-  .week-table th{ font-size:12.5px; color:var(--ink-soft); font-weight:400; padding-bottom:6px; }
+  .week-table{ width:100%; border-collapse:separate; border-spacing:0 7px; font-size:16px; }
+  .week-table th{ font-size:14px; color:var(--ink-soft); font-weight:400; padding-bottom:6px; }
   .week-table th:first-child, .week-table td:first-child{ text-align:left; width:64px; }
   .week-table td{ text-align:center; vertical-align:middle; padding:3px; }
-  .name-cell{ display:flex; align-items:center; gap:6px; font-size:14px; }
-  .dot{ width:10px; height:10px; border-radius:50%; flex:none; display:inline-block; }
+  .name-cell{ display:flex; align-items:center; gap:6px; font-size:16px; }
+  .dot{ width:11px; height:11px; border-radius:50%; flex:none; display:inline-block; }
 
-  .list-table{ width:100%; border-collapse:separate; border-spacing:0 7px; font-size:14.5px; }
-  .list-table th{ text-align:left; font-size:12.5px; color:var(--ink-soft); font-weight:400; padding:0 10px 6px; }
-  .list-table td{ padding:10px; vertical-align:middle; }
+  .list-table{ width:100%; border-collapse:separate; border-spacing:0 8px; font-size:17px; }
+  .list-table th{ text-align:left; font-size:14px; color:var(--ink-soft); font-weight:400; padding:0 12px 6px; }
+  .list-table td{ padding:13px 12px; vertical-align:middle; }
   .list-table tbody tr{ background:var(--card); }
-  .list-table tbody td:first-child{ border-top:1px solid var(--line); border-bottom:1px solid var(--line); border-left:1px solid var(--line); border-radius:12px 0 0 12px; width:70px; color:var(--ink-soft); }
-  .list-table tbody td:last-child{ border-top:1px solid var(--line); border-bottom:1px solid var(--line); border-right:1px solid var(--line); border-radius:0 12px 12px 0; width:70px; }
+  .list-table tbody td:first-child{ border-top:1px solid var(--line); border-bottom:1px solid var(--line); border-left:1px solid var(--line); border-radius:12px 0 0 12px; white-space:nowrap; color:var(--ink-soft); }
+  .list-table tbody td:last-child{ border-top:1px solid var(--line); border-bottom:1px solid var(--line); border-right:1px solid var(--line); border-radius:0 12px 12px 0; }
   .list-table tbody td:nth-child(2){ border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
   .sched-chip{
-    display:inline-block; min-width:56px; padding:6px 5px; border-radius:10px;
-    font-size:12px; color:var(--ink); line-height:1.2;
+    display:inline-block; min-width:60px; padding:7px 6px; border-radius:10px;
+    font-size:15px; color:var(--ink); line-height:1.2;
   }
   .sched-chip.rest{ background:var(--line); color:var(--ink-soft); }
-  .sched-chip.none{ background:transparent; color:#c8c0b6; font-size:13px; }
+  .sched-chip.none{ background:transparent; color:#c8c0b6; font-size:15px; }
   .row-wrap{ background:var(--card); }
   .row-wrap td{ border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
   .row-wrap td:first-child{ border-left:1px solid var(--line); border-radius:12px 0 0 12px; }
   .row-wrap td:last-child{ border-right:1px solid var(--line); border-radius:0 12px 12px 0; }
 
-  .note{ font-size:12.5px; color:var(--ink-soft); margin-top:14px; line-height:1.6; text-align:center; }
-  .loading{ text-align:center; color:var(--ink-soft); font-size:13px; padding:40px 0; }
+  .note{ font-size:14px; color:var(--ink-soft); margin-top:14px; line-height:1.6; text-align:center; }
+  .loading{ text-align:center; color:var(--ink-soft); font-size:15px; padding:40px 0; }
 </style>
 </head>
 <body>
@@ -144,20 +91,15 @@
     <h1>버추얼 연간 캘린더</h1>
   </div>
 
-  <div class="chip-legend">
-    <span>생일·주년</span>
-    <span>🧳 기간 일정(휴가 등)</span>
-  </div>
-
   <nav class="tabs">
-    <button class="tab-link active" data-target="panelCal">기념일 캘린더</button>
-    <button class="tab-link" data-target="panelSched">📡 방송 시간표</button>
+    <button class="tab-link active" data-target="panelCal">일정</button>
+    <button class="tab-link" data-target="panelSched">방송 시간표</button>
   </nav>
 
   <div id="panelCal" class="panel active">
     <div class="section-title">
-      <h2>기념일</h2>
-      <span class="sub">생일 · 데뷔 주년</span>
+      <h2>일정</h2>
+      <span class="sub">생일 · 데뷔 주년 · 기간 일정</span>
     </div>
     <div class="month-block">
       <table class="list-table">
@@ -165,25 +107,11 @@
         <tbody id="daysListBody"><tr><td colspan="3" class="loading">불러오는 중…</td></tr></tbody>
       </table>
     </div>
-
-    <div class="section-title">
-      <h2>기간 일정</h2>
-      <span class="sub">휴가 등</span>
-    </div>
-    <div class="pager">
-      <button id="prevBtn" class="pager-btn" aria-label="이전 달">‹</button>
-      <div class="pager-label">
-        <span id="pagerYear"></span>
-        <button id="todayBtn" class="today-btn">오늘</button>
-      </div>
-      <button id="nextBtn" class="pager-btn" aria-label="다음 달">›</button>
-    </div>
-    <div id="months"><div class="loading">불러오는 중…</div></div>
   </div>
 
   <div id="panelSched" class="panel">
     <div class="section-title">
-      <h2>📡 주간 방송 시간표</h2>
+      <h2>주간 방송 시간표</h2>
       <span class="sub">정규 방송 · 휴방</span>
     </div>
     <div class="month-block">
@@ -201,21 +129,12 @@
 
 <script src="js/supabase-config.js"></script>
 <script>
-const DOW = ['월','화','수','목','금','토','일'];
-const today = new Date();
-let cur = { year: today.getFullYear(), month: today.getMonth() + 1 };
-
 let STREAMERS = {};
 let SPECIAL_DAYS = [];
 let RANGE_EVENTS = [];
 let WEEKLY = [];
 const WEEKDAYS = ['월','화','수','목','금','토','일'];
 
-function daysInMonth(y,m){ return new Date(y, m, 0).getDate(); }
-function firstDowMon0(y,m){
-  const jsDow = new Date(y, m-1, 1).getDay();
-  return (jsDow + 6) % 7;
-}
 function lighten(hex, amt=0.62){
   const h = hex.replace('#','');
   const r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
@@ -224,84 +143,42 @@ function lighten(hex, amt=0.62){
 }
 
 function renderDaysList(){
-  const sorted = [...SPECIAL_DAYS].sort((a,b) => a.month - b.month || a.day - b.day);
-  const tbody = document.getElementById('daysListBody');
-  if(!sorted.length){
-    tbody.innerHTML = `<tr><td colspan="3" class="loading">등록된 기념일이 없어요.</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = sorted.map(e => {
+  const dayItems = SPECIAL_DAYS.map(e => {
     const s = STREAMERS[e.streamer_id] || { name:'?', color:'#999' };
     const typeWord = e.type === 'birthday' ? '생일' : '주년';
-    return `<tr>
-      <td>${e.month}/${e.day}</td>
-      <td><span class="name-cell"><span class="dot" style="background:${s.color}"></span>${s.name}</span></td>
-      <td>${typeWord}</td>
-    </tr>`;
-  }).join('');
-}
-
-function renderMonths(){
-  const { year, month } = cur;
-  document.getElementById('pagerYear').textContent = `${year}년 ${month}월`;
-
-  const total = daysInMonth(year, month);
-  const startEmpty = firstDowMon0(year, month);
-  const isCurMonth = year === today.getFullYear() && month === (today.getMonth() + 1);
-
-  let cells = '';
-  for(let i=0;i<startEmpty;i++) cells += `<div class="cell empty"></div>`;
-  for(let day=1; day<=total; day++){
-    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    const dayRanges = RANGE_EVENTS.filter(r => dateStr >= r.start_date && dateStr <= r.end_date);
-    const hasEvent = dayRanges.length > 0;
-    const isToday = isCurMonth && day === today.getDate();
-    const chips = dayRanges.map(r => {
-      if(r.streamer_id){
-        const s = STREAMERS[r.streamer_id] || { name:'?', color:'#999' };
-        return `<span class="chip range" style="background:${lighten(s.color)}"><span class="l1">${s.name}</span><span class="l2">${r.label}</span></span>`;
-      }
-      return `<span class="chip range" style="background:${lighten('#8a8578')}"><span class="l1">${r.custom_name || '기간 일정'}</span><span class="l2">${r.label}</span></span>`;
-    }).join('');
-    cells += `<div class="cell${hasEvent?' has-event':''}${isToday?' today':''}"><span class="d">${day}</span>${chips}</div>`;
-  }
-
-  const monthStart = `${year}-${String(month).padStart(2,'0')}-01`;
-  const monthEnd = `${year}-${String(month).padStart(2,'0')}-${String(total).padStart(2,'0')}`;
-  const monthRanges = RANGE_EVENTS.filter(r => r.start_date <= monthEnd && r.end_date >= monthStart);
-  const summaryItems = monthRanges.map(r => {
-    const who = r.streamer_id ? ((STREAMERS[r.streamer_id]||{}).name || '') : (r.custom_name || '');
-    return `${who} ${r.label}`.trim();
+    return {
+      sortKey: e.month * 100 + e.day,
+      dateLabel: `${e.month}/${e.day}`,
+      name: s.name,
+      color: s.color,
+      typeWord
+    };
   });
+  const rangeItems = RANGE_EVENTS.map(r => {
+    const [sy, sm, sd] = r.start_date.split('-').map(Number);
+    const [, em, ed] = r.end_date.split('-').map(Number);
+    const s = r.streamer_id ? (STREAMERS[r.streamer_id] || { name:'?', color:'#999' }) : null;
+    return {
+      sortKey: sm * 100 + sd,
+      dateLabel: (sm === em && sd === ed) ? `${sm}/${sd}` : `${sm}/${sd}~${em}/${ed}`,
+      name: s ? s.name : (r.custom_name || '기간 일정'),
+      color: s ? s.color : '#8a8578',
+      typeWord: r.label
+    };
+  });
+  const sorted = dayItems.concat(rangeItems).sort((a,b) => a.sortKey - b.sortKey);
 
-  document.getElementById('months').innerHTML = `
-    <div class="month-block">
-      <div class="month-head">
-        <span class="month-name">${month}월</span>
-        <span class="month-count">${summaryItems.length ? summaryItems.join(' · ') : '기간 일정 없음'}</span>
-      </div>
-      <div class="dow-row">
-        ${DOW.map((d,i)=>`<span class="dow${i===5?' sat':''}${i===6?' sun':''}">${d}</span>`).join('')}
-      </div>
-      <div class="cal-grid">${cells}</div>
-    </div>`;
+  const tbody = document.getElementById('daysListBody');
+  if(!sorted.length){
+    tbody.innerHTML = `<tr><td colspan="3" class="loading">등록된 일정이 없어요.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = sorted.map(item => `<tr>
+      <td>${item.dateLabel}</td>
+      <td><span class="name-cell"><span class="dot" style="background:${item.color}"></span>${item.name}</span></td>
+      <td>${item.typeWord}</td>
+    </tr>`).join('');
 }
-
-function changeMonth(delta){
-  let m = cur.month + delta;
-  let y = cur.year;
-  if(m > 12){ m = 1; y += 1; }
-  if(m < 1){ m = 12; y -= 1; }
-  cur = { year: y, month: m };
-  renderMonths();
-}
-
-document.getElementById('prevBtn').addEventListener('click', () => changeMonth(-1));
-document.getElementById('nextBtn').addEventListener('click', () => changeMonth(1));
-document.getElementById('todayBtn').addEventListener('click', () => {
-  cur = { year: today.getFullYear(), month: today.getMonth() + 1 };
-  renderMonths();
-});
 
 function renderWeek(){
   const streamers = Object.values(STREAMERS);
@@ -335,7 +212,6 @@ async function loadData(){
   RANGE_EVENTS = ranges || [];
   WEEKLY = weekly || [];
   renderDaysList();
-  renderMonths();
   renderWeek();
 }
 
