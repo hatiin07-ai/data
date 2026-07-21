@@ -114,6 +114,15 @@
   .week-table th:first-child, .week-table td:first-child{ text-align:left; width:64px; }
   .week-table td{ text-align:center; vertical-align:middle; padding:3px; }
   .name-cell{ display:flex; align-items:center; gap:6px; font-size:14px; }
+  .dot{ width:10px; height:10px; border-radius:50%; flex:none; display:inline-block; }
+
+  .list-table{ width:100%; border-collapse:separate; border-spacing:0 7px; font-size:14.5px; }
+  .list-table th{ text-align:left; font-size:12.5px; color:var(--ink-soft); font-weight:400; padding:0 10px 6px; }
+  .list-table td{ padding:10px; vertical-align:middle; }
+  .list-table tbody tr{ background:var(--card); }
+  .list-table tbody td:first-child{ border-top:1px solid var(--line); border-bottom:1px solid var(--line); border-left:1px solid var(--line); border-radius:12px 0 0 12px; width:70px; color:var(--ink-soft); }
+  .list-table tbody td:last-child{ border-top:1px solid var(--line); border-bottom:1px solid var(--line); border-right:1px solid var(--line); border-radius:0 12px 12px 0; width:70px; }
+  .list-table tbody td:nth-child(2){ border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
   .sched-chip{
     display:inline-block; min-width:56px; padding:6px 5px; border-radius:10px;
     font-size:12px; color:var(--ink); line-height:1.2;
@@ -147,8 +156,19 @@
 
   <div id="panelCal" class="panel active">
     <div class="section-title">
-      <h2>기념일 캘린더</h2>
+      <h2>기념일</h2>
       <span class="sub">생일 · 데뷔 주년</span>
+    </div>
+    <div class="month-block">
+      <table class="list-table">
+        <thead><tr><th>날짜</th><th>스트리머</th><th>구분</th></tr></thead>
+        <tbody id="daysListBody"><tr><td colspan="3" class="loading">불러오는 중…</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="section-title">
+      <h2>기간 일정</h2>
+      <span class="sub">휴가 등</span>
     </div>
     <div class="pager">
       <button id="prevBtn" class="pager-btn" aria-label="이전 달">‹</button>
@@ -203,28 +223,40 @@ function lighten(hex, amt=0.62){
   return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
 }
 
+function renderDaysList(){
+  const sorted = [...SPECIAL_DAYS].sort((a,b) => a.month - b.month || a.day - b.day);
+  const tbody = document.getElementById('daysListBody');
+  if(!sorted.length){
+    tbody.innerHTML = `<tr><td colspan="3" class="loading">등록된 기념일이 없어요.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = sorted.map(e => {
+    const s = STREAMERS[e.streamer_id] || { name:'?', color:'#999' };
+    const typeWord = e.type === 'birthday' ? '생일' : '주년';
+    return `<tr>
+      <td>${e.month}/${e.day}</td>
+      <td><span class="name-cell"><span class="dot" style="background:${s.color}"></span>${s.name}</span></td>
+      <td>${typeWord}</td>
+    </tr>`;
+  }).join('');
+}
+
 function renderMonths(){
   const { year, month } = cur;
   document.getElementById('pagerYear').textContent = `${year}년 ${month}월`;
 
   const total = daysInMonth(year, month);
   const startEmpty = firstDowMon0(year, month);
-  const events = SPECIAL_DAYS.filter(e => e.month === month);
   const isCurMonth = year === today.getFullYear() && month === (today.getMonth() + 1);
 
   let cells = '';
   for(let i=0;i<startEmpty;i++) cells += `<div class="cell empty"></div>`;
   for(let day=1; day<=total; day++){
     const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    const dayEvents = events.filter(e => e.day === day);
     const dayRanges = RANGE_EVENTS.filter(r => dateStr >= r.start_date && dateStr <= r.end_date);
-    const hasEvent = dayEvents.length > 0 || dayRanges.length > 0;
+    const hasEvent = dayRanges.length > 0;
     const isToday = isCurMonth && day === today.getDate();
-    const chips = dayEvents.map(e => {
-      const s = STREAMERS[e.streamer_id] || { name:'?', color:'#999' };
-      const typeWord = e.type === 'birthday' ? '생일' : '주년';
-      return `<span class="chip" style="background:${lighten(s.color)}"><span class="l1">${s.name}</span><span class="l2">${typeWord}</span></span>`;
-    }).join('') + dayRanges.map(r => {
+    const chips = dayRanges.map(r => {
       if(r.streamer_id){
         const s = STREAMERS[r.streamer_id] || { name:'?', color:'#999' };
         return `<span class="chip range" style="background:${lighten(s.color)}"><span class="l1">${s.name}</span><span class="l2">${r.label}</span></span>`;
@@ -237,16 +269,16 @@ function renderMonths(){
   const monthStart = `${year}-${String(month).padStart(2,'0')}-01`;
   const monthEnd = `${year}-${String(month).padStart(2,'0')}-${String(total).padStart(2,'0')}`;
   const monthRanges = RANGE_EVENTS.filter(r => r.start_date <= monthEnd && r.end_date >= monthStart);
-  const summaryItems = events.map(e=>e.label || '').concat(monthRanges.map(r => {
+  const summaryItems = monthRanges.map(r => {
     const who = r.streamer_id ? ((STREAMERS[r.streamer_id]||{}).name || '') : (r.custom_name || '');
     return `${who} ${r.label}`.trim();
-  }));
+  });
 
   document.getElementById('months').innerHTML = `
     <div class="month-block">
       <div class="month-head">
         <span class="month-name">${month}월</span>
-        <span class="month-count">${summaryItems.length ? summaryItems.join(' · ') : '기념일 없음'}</span>
+        <span class="month-count">${summaryItems.length ? summaryItems.join(' · ') : '기간 일정 없음'}</span>
       </div>
       <div class="dow-row">
         ${DOW.map((d,i)=>`<span class="dow${i===5?' sat':''}${i===6?' sun':''}">${d}</span>`).join('')}
@@ -302,6 +334,7 @@ async function loadData(){
   SPECIAL_DAYS = days || [];
   RANGE_EVENTS = ranges || [];
   WEEKLY = weekly || [];
+  renderDaysList();
   renderMonths();
   renderWeek();
 }
