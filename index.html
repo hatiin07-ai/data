@@ -63,13 +63,17 @@
   .name-cell{ display:flex; align-items:center; gap:6px; font-size:16px; }
   .dot{ width:11px; height:11px; border-radius:50%; flex:none; display:inline-block; }
 
-  .list-table{ width:100%; border-collapse:separate; border-spacing:0 8px; font-size:17px; }
-  .list-table th{ text-align:left; font-size:14px; color:var(--ink-soft); font-weight:400; padding:0 12px 6px; }
-  .list-table td{ padding:13px 12px; vertical-align:middle; }
+  .list-table{ width:100%; table-layout:fixed; border-collapse:separate; border-spacing:0 8px; font-size:17px; }
+  .list-table th{ text-align:center; font-size:14px; color:var(--ink-soft); font-weight:400; padding:0 12px 6px; }
+  .list-table td{ padding:13px 12px; vertical-align:middle; text-align:center; }
+  .list-table th:nth-child(1), .list-table td:nth-child(1){ width:22%; }
+  .list-table th:nth-child(2), .list-table td:nth-child(2){ width:40%; }
+  .list-table th:nth-child(3), .list-table td:nth-child(3){ width:38%; }
   .list-table tbody tr{ background:var(--card); }
   .list-table tbody td:first-child{ border-top:1px solid var(--line); border-bottom:1px solid var(--line); border-left:1px solid var(--line); border-radius:12px 0 0 12px; white-space:nowrap; color:var(--ink-soft); }
   .list-table tbody td:last-child{ border-top:1px solid var(--line); border-bottom:1px solid var(--line); border-right:1px solid var(--line); border-radius:0 12px 12px 0; }
   .list-table tbody td:nth-child(2){ border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+  .list-table .name-cell{ justify-content:center; }
   .sched-chip{
     display:inline-block; min-width:60px; padding:7px 6px; border-radius:10px;
     font-size:15px; color:var(--ink); line-height:1.2;
