@@ -148,6 +148,12 @@ function lighten(hex, amt=0.62){
   const mix = c => Math.round(c + (255 - c) * amt);
   return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
 }
+function kstTodayDowIdx(){
+  const n = new Date();
+  const utcMs = n.getTime() + n.getTimezoneOffset() * 60000;
+  const kst = new Date(utcMs + 9 * 3600000);
+  return (kst.getDay() + 6) % 7; // 0=월 ... 6=일, 브라우저 시간대 무관 KST 고정
+}
 
 function renderDaysList(){
   const dayItems = SPECIAL_DAYS.map(e => {
@@ -189,7 +195,7 @@ function renderDaysList(){
 
 function renderWeek(){
   const streamers = Object.values(STREAMERS);
-  const todayIdx = (new Date().getDay() + 6) % 7; // 0=월 ... 6=일
+  const todayIdx = kstTodayDowIdx(); // 0=월 ... 6=일 (KST 기준)
   for(let i=0;i<7;i++){
     const th = document.getElementById('wkTh'+i);
     if(th) th.classList.toggle('today-col', i === todayIdx);
