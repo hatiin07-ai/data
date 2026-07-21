@@ -60,6 +60,9 @@
   .week-table th{ font-size:14px; color:var(--ink-soft); font-weight:400; padding-bottom:6px; }
   .week-table th:first-child, .week-table td:first-child{ text-align:left; width:64px; }
   .week-table td{ text-align:center; vertical-align:middle; padding:3px; }
+  .week-table th.today-col{ color:var(--ink); font-weight:700; position:relative; }
+  .week-table th.today-col::after{ content:'오늘'; display:block; font-size:10px; font-weight:400; color:#c07a2f; margin-top:1px; }
+  .week-table td.today-col{ background:#fdefd8; border-radius:10px; }
   .name-cell{ display:flex; align-items:center; gap:6px; font-size:16px; }
   .dot{ width:11px; height:11px; border-radius:50%; flex:none; display:inline-block; }
 
@@ -123,7 +126,7 @@
         <thead>
           <tr>
             <th></th>
-            <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th><th>일</th>
+            <th id="wkTh0">월</th><th id="wkTh1">화</th><th id="wkTh2">수</th><th id="wkTh3">목</th><th id="wkTh4">금</th><th id="wkTh5">토</th><th id="wkTh6">일</th>
           </tr>
         </thead>
         <tbody id="weekBody"><tr><td colspan="8" class="loading">불러오는 중…</td></tr></tbody>
@@ -186,14 +189,20 @@ function renderDaysList(){
 
 function renderWeek(){
   const streamers = Object.values(STREAMERS);
+  const todayIdx = (new Date().getDay() + 6) % 7; // 0=월 ... 6=일
+  for(let i=0;i<7;i++){
+    const th = document.getElementById('wkTh'+i);
+    if(th) th.classList.toggle('today-col', i === todayIdx);
+  }
   const body = document.getElementById('weekBody');
   body.innerHTML = streamers.map(s => {
     const cells = WEEKDAYS.map((_, wd) => {
+      const cls = wd === todayIdx ? ' class="today-col"' : '';
       const row = WEEKLY.find(w => w.streamer_id === s.id && w.weekday === wd);
-      if(!row) return `<td><span class="sched-chip none">-</span></td>`;
-      if(row.is_rest) return `<td><span class="sched-chip rest">휴방</span></td>`;
+      if(!row) return `<td${cls}><span class="sched-chip none">-</span></td>`;
+      if(row.is_rest) return `<td${cls}><span class="sched-chip rest">휴방</span></td>`;
       const t = row.time ? row.time.slice(0,5) : '-';
-      return `<td><span class="sched-chip" style="background:${lighten(s.color)}">${t}</span></td>`;
+      return `<td${cls}><span class="sched-chip" style="background:${lighten(s.color)}">${t}</span></td>`;
     }).join('');
     return `<tr class="row-wrap">
       <td><span class="name-cell"><span style="width:10px;height:10px;border-radius:50%;background:${s.color};display:inline-block;flex:none"></span>${s.name}</span></td>
