@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>관리 · 버추얼 캘린더</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --paper:#f6f3ee; --ink:#2c2622; --ink-soft:#7d7168; --line:#e2dccf; --card:#ffffff;
+    --danger:#d9686f;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);}
+  body{ font-family:'Gowun Dodum', sans-serif; }
+  h1,h2,.brand{ font-family:'Jua', sans-serif; font-weight:400; }
+
+  .wrap{ max-width:920px; margin:0 auto; padding:32px 24px 80px; }
+  .top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
+  .brand{ font-size:20px; }
+  .logout-btn{ font-size:12.5px; color:var(--ink-soft); background:var(--card); border:1px solid var(--line); border-radius:20px; padding:6px 14px; cursor:pointer; }
+
+  .login-box{ max-width:340px; margin:80px auto; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:28px; text-align:center; }
+  .login-box h1{ font-size:20px; margin:0 0 20px; }
+  .login-box input{ width:100%; padding:10px 12px; margin-bottom:10px; border:1px solid var(--line); border-radius:8px; font-size:14px; font-family:inherit; }
+  .login-box button{ width:100%; padding:10px; background:var(--ink); color:#fff; border:none; border-radius:8px; font-size:14px; cursor:pointer; font-family:inherit; }
+  .login-msg{ font-size:12.5px; color:var(--danger); margin-top:10px; min-height:16px; }
+
+  .tabs{ display:flex; gap:8px; margin-bottom:24px; }
+  .tab-btn{ font-family:'Jua', sans-serif; font-size:13px; padding:8px 16px; border-radius:20px; border:1px solid var(--line); background:var(--card); color:var(--ink-soft); cursor:pointer; }
+  .tab-btn.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin-bottom:18px; }
+  .card h3{ font-size:15px; margin:0 0 14px; font-weight:500; }
+
+  .form-row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+  .form-row select, .form-row input{ padding:8px 10px; border:1px solid var(--line); border-radius:8px; font-size:13px; font-family:inherit; }
+  .form-row input[type=text]{ flex:1; min-width:120px; }
+  .form-row input[type=number]{ width:70px; }
+  .form-row input[type=color]{ width:44px; height:36px; padding:2px; }
+  .btn{ padding:8px 16px; background:var(--ink); color:#fff; border:none; border-radius:8px; font-size:13px; cursor:pointer; font-family:inherit; }
+  .btn.ghost{ background:transparent; color:var(--ink-soft); border:1px solid var(--line); }
+  .btn.small{ padding:5px 10px; font-size:12px; }
+
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  th{ text-align:left; color:var(--ink-soft); font-weight:400; font-size:12px; padding:6px 8px; border-bottom:1px solid var(--line); }
+  td{ padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  .del-btn{ color:var(--danger); background:none; border:none; cursor:pointer; font-size:12px; }
+  .swatch{ display:inline-block; width:14px; height:14px; border-radius:4px; vertical-align:-2px; margin-right:6px; }
+
+  .week-grid{ width:100%; border-collapse:separate; border-spacing:0 6px; }
+  .week-grid th{ text-align:center; }
+  .week-grid td{ text-align:center; border:none; padding:3px; }
+  .wk-cell{ display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .wk-cell input[type=time]{ width:84px; padding:5px; border:1px solid var(--line); border-radius:6px; font-size:12px; font-family:inherit; }
+  .wk-cell label{ font-size:10.5px; color:var(--ink-soft); display:flex; align-items:center; gap:3px; }
+  .wk-name{ display:flex; align-items:center; gap:6px; font-size:13px; white-space:nowrap; }
+  .save-hint{ font-size:11px; color:var(--ink-soft); margin-top:8px; }
+</style>
+</head>
+<body>
+
+<div id="loginScreen" class="login-box" style="display:none">
+  <h1>🔒 관리자 로그인</h1>
+  <input type="email" id="loginEmail" placeholder="이메일" autocomplete="username" />
+  <input type="password" id="loginPw" placeholder="비밀번호" autocomplete="current-password" />
+  <button id="loginBtn">로그인</button>
+  <div class="login-msg" id="loginMsg"></div>
+</div>
+
+<div id="app" class="wrap" style="display:none">
+  <div class="top">
+    <span class="brand">🎀 버추얼 캘린더 관리</span>
+    <button class="logout-btn" id="logoutBtn">로그아웃</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-panel="panelDays">🎂 기념일</button>
+    <button class="tab-btn" data-panel="panelWeek">📡 주간 시간표</button>
+    <button class="tab-btn" data-panel="panelStreamers">🎨 스트리머</button>
+  </div>
+
+  <div id="panelDays" class="panel active">
+    <div class="card">
+      <h3>기념일 추가</h3>
+      <div class="form-row">
+        <select id="dayStreamer"></select>
+        <input type="number" id="dayMonth" min="1" max="12" placeholder="월" />
+        <input type="number" id="dayDay" min="1" max="31" placeholder="일" />
+        <select id="dayType">
+          <option value="birthday">생일</option>
+          <option value="anniv">데뷔 주년</option>
+        </select>
+        <input type="text" id="dayLabel" placeholder="라벨 (예: 큐피 생일)" />
+        <button class="btn" id="dayAddBtn">추가</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>등록된 기념일</h3>
+      <table id="daysTable">
+        <thead><tr><th>월/일</th><th>스트리머</th><th>구분</th><th>라벨</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="panelWeek" class="panel">
+    <div class="card">
+      <h3>주간 방송 시간표</h3>
+      <table class="week-grid">
+        <thead>
+          <tr><th></th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th><th>일</th></tr>
+        </thead>
+        <tbody id="weekTable"></tbody>
+      </table>
+      <div class="save-hint">시간 입력하거나 휴방 체크하면 자동 저장돼요. 비워두면 정보 없음으로 처리돼요.</div>
+    </div>
+  </div>
+
+  <div id="panelStreamers" class="panel">
+    <div class="card">
+      <h3>스트리머 추가</h3>
+      <div class="form-row">
+        <input type="text" id="stId" placeholder="id (영문, 예: jju)" style="max-width:110px" />
+        <input type="text" id="stName" placeholder="이름" />
+        <input type="color" id="stColor" value="#ef5da8" />
+        <input type="number" id="stSort" placeholder="순서" style="width:60px" />
+        <button class="btn" id="stAddBtn">추가</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>등록된 스트리머</h3>
+      <table id="streamersTable">
+        <thead><tr><th>색</th><th>이름</th><th>id</th><th>순서</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="../js/supabase-config.js"></script>
+<script>
+const sb = initSupabase();
+const WEEKDAYS = ['월','화','수','목','금','토','일'];
+let STREAMERS = [];
+
+// ---------- Auth ----------
+async function checkAuth(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session){ showApp(); } else { showLogin(); }
+}
+function showLogin(){
+  document.getElementById('loginScreen').style.display = 'block';
+  document.getElementById('app').style.display = 'none';
+}
+function showApp(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  loadAll();
+}
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPw').value;
+  const msg = document.getElementById('loginMsg');
+  msg.textContent = '';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){ msg.textContent = '로그인 실패: 이메일/비밀번호를 확인해주세요.'; return; }
+  showApp();
+});
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await sb.auth.signOut();
+  showLogin();
+});
+
+// ---------- Tabs ----------
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.panel).classList.add('active');
+  });
+});
+
+// ---------- Load ----------
+async function loadAll(){
+  const { data: streamers } = await sb.from('streamers').select('*').order('sort_order');
+  STREAMERS = streamers || [];
+  fillStreamerSelect();
+  await Promise.all([ loadDays(), loadWeek(), loadStreamers() ]);
+}
+
+function fillStreamerSelect(){
+  const sel = document.getElementById('dayStreamer');
+  sel.innerHTML = STREAMERS.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+}
+
+// ---------- 기념일 ----------
+async function loadDays(){
+  const { data } = await sb.from('special_days').select('*').order('month').order('day');
+  const tbody = document.querySelector('#daysTable tbody');
+  tbody.innerHTML = (data || []).map(d => {
+    const s = STREAMERS.find(x => x.id === d.streamer_id) || { name:d.streamer_id, color:'#999' };
+    const typeLabel = d.type === 'birthday' ? '생일' : '데뷔주년';
+    return `<tr>
+      <td>${d.month}/${d.day}</td>
+      <td><span class="swatch" style="background:${s.color}"></span>${s.name}</td>
+      <td>${typeLabel}</td>
+      <td>${d.label || ''}</td>
+      <td><button class="del-btn" onclick="delDay(${d.id})">삭제</button></td>
+    </tr>`;
+  }).join('');
+}
+document.getElementById('dayAddBtn').addEventListener('click', async () => {
+  const streamer_id = document.getElementById('dayStreamer').value;
+  const month = parseInt(document.getElementById('dayMonth').value, 10);
+  const day = parseInt(document.getElementById('dayDay').value, 10);
+  const type = document.getElementById('dayType').value;
+  const label = document.getElementById('dayLabel').value.trim();
+  if(!streamer_id || !month || !day){ alert('스트리머/월/일을 입력해주세요.'); return; }
+  const { error } = await sb.from('special_days').insert({ streamer_id, month, day, type, label });
+  if(error){ alert('추가 실패: ' + error.message); return; }
+  document.getElementById('dayMonth').value = '';
+  document.getElementById('dayDay').value = '';
+  document.getElementById('dayLabel').value = '';
+  loadDays();
+});
+async function delDay(id){
+  if(!confirm('이 기념일을 삭제할까요?')) return;
+  await sb.from('special_days').delete().eq('id', id);
+  loadDays();
+}
+
+// ---------- 주간 시간표 ----------
+async function loadWeek(){
+  const { data } = await sb.from('weekly_schedule').select('*');
+  const map = {};
+  (data || []).forEach(r => { map[`${r.streamer_id}_${r.weekday}`] = r; });
+
+  const tbody = document.getElementById('weekTable');
+  tbody.innerHTML = STREAMERS.map(s => {
+    const cells = WEEKDAYS.map((_, wd) => {
+      const row = map[`${s.id}_${wd}`];
+      const time = row && row.time ? row.time.slice(0,5) : '';
+      const rest = row ? row.is_rest : false;
+      return `<td>
+        <div class="wk-cell">
+          <input type="time" value="${time}" ${rest?'disabled':''}
+            onchange="saveWeek('${s.id}',${wd},this.value,document.getElementById('rest_${s.id}_${wd}').checked)" />
+          <label>
+            <input type="checkbox" id="rest_${s.id}_${wd}" ${rest?'checked':''}
+              onchange="onRestToggle('${s.id}',${wd},this.checked)" />휴방
+          </label>
+        </div>
+      </td>`;
+    }).join('');
+    return `<tr><td class="wk-name"><span class="swatch" style="background:${s.color}"></span>${s.name}</td>${cells}</tr>`;
+  }).join('');
+}
+function onRestToggle(streamer_id, weekday, checked){
+  const timeInput = document.querySelector(`#rest_${streamer_id}_${weekday}`).closest('.wk-cell').querySelector('input[type=time]');
+  timeInput.disabled = checked;
+  saveWeek(streamer_id, weekday, timeInput.value, checked);
+}
+async function saveWeek(streamer_id, weekday, timeVal, isRest){
+  const payload = {
+    streamer_id, weekday,
+    time: isRest ? null : (timeVal || null),
+    is_rest: !!isRest
+  };
+  const { error } = await sb.from('weekly_schedule').upsert(payload, { onConflict: 'streamer_id,weekday' });
+  if(error) console.error(error);
+}
+
+// ---------- 스트리머 ----------
+async function loadStreamers(){
+  const tbody = document.querySelector('#streamersTable tbody');
+  tbody.innerHTML = STREAMERS.map(s => `<tr>
+    <td><span class="swatch" style="background:${s.color}"></span></td>
+    <td>${s.name}</td>
+    <td>${s.id}</td>
+    <td>${s.sort_order}</td>
+    <td><button class="del-btn" onclick="delStreamer('${s.id}')">삭제</button></td>
+  </tr>`).join('');
+}
+document.getElementById('stAddBtn').addEventListener('click', async () => {
+  const id = document.getElementById('stId').value.trim();
+  const name = document.getElementById('stName').value.trim();
+  const color = document.getElementById('stColor').value;
+  const sort_order = parseInt(document.getElementById('stSort').value, 10) || 0;
+  if(!id || !name){ alert('id와 이름을 입력해주세요.'); return; }
+  const { error } = await sb.from('streamers').insert({ id, name, color, sort_order });
+  if(error){ alert('추가 실패: ' + error.message); return; }
+  document.getElementById('stId').value = '';
+  document.getElementById('stName').value = '';
+  document.getElementById('stSort').value = '';
+  loadAll();
+});
+async function delStreamer(id){
+  if(!confirm('이 스트리머와 관련 기념일/시간표가 모두 삭제돼요. 계속할까요?')) return;
+  await sb.from('streamers').delete().eq('id', id);
+  loadAll();
+}
+
+checkAuth();
+</script>
+</body>
+</html>
