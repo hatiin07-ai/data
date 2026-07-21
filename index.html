@@ -92,7 +92,7 @@
   .dow.sun{ color:#d9686f; } .dow.sat{ color:#4f8ef7; }
 
   .cell{
-    min-height:96px; border-radius:9px; padding:5px 5px 6px;
+    min-height:132px; border-radius:9px; padding:5px 5px 6px;
     background:#faf8f4; position:relative;
   }
   .cell.empty{ background:transparent; }
@@ -101,13 +101,13 @@
   .cell.today .d{ color:#fff; background:var(--ink); border-radius:50%; padding:1px 6px; }
 
   .chip{
-    margin-top:4px; font-size:13px; line-height:1.35;
-    padding:4px 6px; border-radius:10px; color:#fff;
+    margin-top:5px; font-size:19.5px; line-height:1.3;
+    padding:5px 7px; border-radius:10px; color:var(--ink);
     display:block; text-align:center;
   }
   .chip .l1{ display:block; font-weight:500; }
-  .chip .l2{ display:block; font-size:11.5px; opacity:.9; }
-  .chip.range{ box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.7); }
+  .chip .l2{ display:block; font-size:17px; opacity:.75; }
+  .chip.range{ box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.8); }
 
   .week-table{ width:100%; border-collapse:separate; border-spacing:0 7px; font-size:13px; }
   .week-table th{ font-size:12.5px; color:var(--ink-soft); font-weight:400; padding-bottom:6px; }
@@ -116,7 +116,7 @@
   .name-cell{ display:flex; align-items:center; gap:6px; font-size:14px; }
   .sched-chip{
     display:inline-block; min-width:56px; padding:6px 5px; border-radius:10px;
-    font-size:12px; color:#fff; line-height:1.2;
+    font-size:12px; color:var(--ink); line-height:1.2;
   }
   .sched-chip.rest{ background:var(--line); color:var(--ink-soft); }
   .sched-chip.none{ background:transparent; color:#c8c0b6; font-size:13px; }
@@ -136,18 +136,18 @@
   </div>
 
   <div class="chip-legend">
-    <span>🎂🎉 생일·주년</span>
+    <span>생일·주년</span>
     <span>🧳 기간 일정(휴가 등)</span>
   </div>
 
   <nav class="tabs">
-    <button class="tab-link active" data-target="panelCal">🎂 기념일 캘린더</button>
+    <button class="tab-link active" data-target="panelCal">기념일 캘린더</button>
     <button class="tab-link" data-target="panelSched">📡 방송 시간표</button>
   </nav>
 
   <div id="panelCal" class="panel active">
     <div class="section-title">
-      <h2>🎂 기념일 캘린더</h2>
+      <h2>기념일 캘린더</h2>
       <span class="sub">생일 · 데뷔 주년</span>
     </div>
     <div class="pager">
@@ -196,6 +196,12 @@ function firstDowMon0(y,m){
   const jsDow = new Date(y, m-1, 1).getDay();
   return (jsDow + 6) % 7;
 }
+function lighten(hex, amt=0.62){
+  const h = hex.replace('#','');
+  const r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+  const mix = c => Math.round(c + (255 - c) * amt);
+  return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
+}
 
 function renderMonths(){
   const { year, month } = cur;
@@ -216,15 +222,14 @@ function renderMonths(){
     const isToday = isCurMonth && day === today.getDate();
     const chips = dayEvents.map(e => {
       const s = STREAMERS[e.streamer_id] || { name:'?', color:'#999' };
-      const icon = e.type === 'birthday' ? '🎂' : '🎉';
       const typeWord = e.type === 'birthday' ? '생일' : '주년';
-      return `<span class="chip" style="background:${s.color}"><span class="l1">${icon} ${s.name}</span><span class="l2">${typeWord}</span></span>`;
+      return `<span class="chip" style="background:${lighten(s.color)}"><span class="l1">${s.name}</span><span class="l2">${typeWord}</span></span>`;
     }).join('') + dayRanges.map(r => {
       if(r.streamer_id){
         const s = STREAMERS[r.streamer_id] || { name:'?', color:'#999' };
-        return `<span class="chip range" style="background:${s.color}"><span class="l1">🧳 ${s.name}</span><span class="l2">${r.label}</span></span>`;
+        return `<span class="chip range" style="background:${lighten(s.color)}"><span class="l1">🧳 ${s.name}</span><span class="l2">${r.label}</span></span>`;
       }
-      return `<span class="chip range" style="background:#8a8578"><span class="l1">🎪 ${r.custom_name || '기간 일정'}</span><span class="l2">${r.label}</span></span>`;
+      return `<span class="chip range" style="background:${lighten('#8a8578')}"><span class="l1">🎪 ${r.custom_name || '기간 일정'}</span><span class="l2">${r.label}</span></span>`;
     }).join('');
     cells += `<div class="cell${hasEvent?' has-event':''}${isToday?' today':''}"><span class="d">${day}</span>${chips}</div>`;
   }
@@ -275,7 +280,7 @@ function renderWeek(){
       if(!row) return `<td><span class="sched-chip none">-</span></td>`;
       if(row.is_rest) return `<td><span class="sched-chip rest">휴방</span></td>`;
       const t = row.time ? row.time.slice(0,5) : '-';
-      return `<td><span class="sched-chip" style="background:${s.color}">${t}</span></td>`;
+      return `<td><span class="sched-chip" style="background:${lighten(s.color)}">${t}</span></td>`;
     }).join('');
     return `<tr class="row-wrap">
       <td><span class="name-cell"><span style="width:10px;height:10px;border-radius:50%;background:${s.color};display:inline-block;flex:none"></span>${s.name}</span></td>
