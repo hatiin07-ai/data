@@ -86,3 +86,19 @@ insert into public.weekly_schedule (streamer_id, weekday, time, is_rest) values
   ('yami',0,'21:00',false),('yami',1,'21:00',false), ('yami',2,null,true),    ('yami',3,'21:00',false),('yami',4,'21:00',false), ('yami',5,'21:00',false),('yami',6,'21:00',false),
   ('nyanya',0,null,true),  ('nyanya',1,'19:00',false),('nyanya',2,'19:00',false),('nyanya',3,null,true),('nyanya',4,'19:00',false),('nyanya',5,'14:00',false),('nyanya',6,'14:00',false)
 on conflict (streamer_id, weekday) do nothing;
+
+-- 4) 기간 일정 (휴가 등 특정 날짜 범위 이벤트) — 예: 7/21~7/24 여름휴가
+create table if not exists public.range_events (
+  id bigserial primary key,
+  streamer_id text not null references public.streamers(id) on delete cascade,
+  start_date date not null,
+  end_date date not null,
+  label text not null,
+  created_at timestamptz default now()
+);
+create index if not exists idx_range_events_dates on public.range_events(start_date, end_date);
+alter table public.range_events enable row level security;
+drop policy if exists "public read range_events" on public.range_events;
+drop policy if exists "auth all range_events" on public.range_events;
+create policy "public read range_events" on public.range_events for select using (true);
+create policy "auth all range_events" on public.range_events for all to authenticated using (true) with check (true);

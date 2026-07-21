@@ -40,6 +40,12 @@
   .legend-item{ display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ink); }
   .dot{ width:10px; height:10px; border-radius:50%; flex:none; }
 
+  .chip-legend{
+    display:flex; justify-content:center; gap:18px; margin:-20px 0 30px;
+    font-size:11.5px; color:var(--ink-soft);
+  }
+  .chip-legend span{ display:flex; align-items:center; gap:5px; }
+
   .section-title{
     display:flex; align-items:baseline; gap:10px;
     margin:0 0 16px;
@@ -98,6 +104,7 @@
     padding:2px 5px; border-radius:20px; color:#fff;
     display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
+  .chip.range{ box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.7); }
 
   .note{ font-size:11.5px; color:var(--ink-soft); margin-top:14px; line-height:1.6; text-align:center; }
   footer{ text-align:center; margin-top:60px; font-size:12px; color:var(--ink-soft); }
@@ -113,6 +120,10 @@
   </div>
 
   <div class="legend" id="legend"><div class="loading">불러오는 중…</div></div>
+  <div class="chip-legend">
+    <span>🎂🎉 생일·주년</span>
+    <span>🧳 기간 일정(휴가 등)</span>
+  </div>
 
   <div class="section-title">
     <h2>🎂 기념일 캘린더</h2>
@@ -138,6 +149,7 @@ let cur = { year: today.getFullYear(), month: today.getMonth() + 1 };
 
 let STREAMERS = {};
 let SPECIAL_DAYS = [];
+let RANGE_EVENTS = [];
 
 function daysInMonth(y,m){ return new Date(y, m, 0).getDate(); }
 function firstDowMon0(y,m){
@@ -164,22 +176,32 @@ function renderMonths(){
   let cells = '';
   for(let i=0;i<startEmpty;i++) cells += `<div class="cell empty"></div>`;
   for(let day=1; day<=total; day++){
+    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     const dayEvents = events.filter(e => e.day === day);
-    const hasEvent = dayEvents.length > 0;
+    const dayRanges = RANGE_EVENTS.filter(r => dateStr >= r.start_date && dateStr <= r.end_date);
+    const hasEvent = dayEvents.length > 0 || dayRanges.length > 0;
     const isToday = isCurMonth && day === today.getDate();
     const chips = dayEvents.map(e => {
       const s = STREAMERS[e.streamer_id] || { name:'?', color:'#999' };
       const icon = e.type === 'birthday' ? '🎂' : '🎉';
       return `<span class="chip" style="background:${s.color}">${icon} ${s.name}</span>`;
+    }).join('') + dayRanges.map(r => {
+      const s = STREAMERS[r.streamer_id] || { name:'?', color:'#999' };
+      return `<span class="chip range" style="background:${s.color}">🧳 ${s.name} ${r.label}</span>`;
     }).join('');
     cells += `<div class="cell${hasEvent?' has-event':''}${isToday?' today':''}"><span class="d">${day}</span>${chips}</div>`;
   }
+
+  const monthStart = `${year}-${String(month).padStart(2,'0')}-01`;
+  const monthEnd = `${year}-${String(month).padStart(2,'0')}-${String(total).padStart(2,'0')}`;
+  const monthRanges = RANGE_EVENTS.filter(r => r.start_date <= monthEnd && r.end_date >= monthStart);
+  const summaryItems = events.map(e=>e.label || '').concat(monthRanges.map(r => `${(STREAMERS[r.streamer_id]||{}).name || ''} ${r.label}`));
 
   document.getElementById('months').innerHTML = `
     <div class="month-block">
       <div class="month-head">
         <span class="month-name">${month}월</span>
-        <span class="month-count">${events.length ? events.map(e=>e.label || '').join(' · ') : '기념일 없음'}</span>
+        <span class="month-count">${summaryItems.length ? summaryItems.join(' · ') : '기념일 없음'}</span>
       </div>
       <div class="dow-row">
         ${DOW.map((d,i)=>`<span class="dow${i===5?' sat':''}${i===6?' sun':''}">${d}</span>`).join('')}
@@ -206,13 +228,15 @@ document.getElementById('todayBtn').addEventListener('click', () => {
 
 async function loadData(){
   const sb = initSupabase();
-  const [{ data: streamers }, { data: days }] = await Promise.all([
+  const [{ data: streamers }, { data: days }, { data: ranges }] = await Promise.all([
     sb.from('streamers').select('*').order('sort_order'),
-    sb.from('special_days').select('*')
+    sb.from('special_days').select('*'),
+    sb.from('range_events').select('*')
   ]);
   STREAMERS = {};
   (streamers || []).forEach(s => { STREAMERS[s.id] = s; });
   SPECIAL_DAYS = days || [];
+  RANGE_EVENTS = ranges || [];
   renderLegend();
   renderMonths();
 }
