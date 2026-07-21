@@ -86,14 +86,18 @@ insert into public.weekly_schedule (streamer_id, weekday, time, is_rest) values
 on conflict (streamer_id, weekday) do nothing;
 
 -- 4) 기간 일정 (휴가 등 특정 날짜 범위 이벤트) — 예: 7/21~7/24 여름휴가
+-- streamer_id가 없으면(NULL) custom_name(예: "대형 콜라보 방송")으로 직접 표기
 create table if not exists public.range_events (
   id bigserial primary key,
-  streamer_id text not null references public.streamers(id) on delete cascade,
+  streamer_id text references public.streamers(id) on delete cascade,
+  custom_name text,
   start_date date not null,
   end_date date not null,
   label text not null,
   created_at timestamptz default now()
 );
+alter table public.range_events alter column streamer_id drop not null;
+alter table public.range_events add column if not exists custom_name text;
 create index if not exists idx_range_events_dates on public.range_events(start_date, end_date);
 alter table public.range_events enable row level security;
 drop policy if exists "public read range_events" on public.range_events;

@@ -113,7 +113,16 @@
     <div class="card">
       <h3>기간 일정 추가 (휴가 등)</h3>
       <div class="form-row">
+        <label style="font-size:13px; display:flex; align-items:center; gap:5px;">
+          <input type="radio" name="rgTarget" value="streamer" checked id="rgTargetStreamer" /> 스트리머
+        </label>
+        <label style="font-size:13px; display:flex; align-items:center; gap:5px;">
+          <input type="radio" name="rgTarget" value="custom" id="rgTargetCustom" /> 직접 입력(대형 컨텐츠 등)
+        </label>
+      </div>
+      <div class="form-row">
         <select id="rgStreamer"></select>
+        <input type="text" id="rgCustomName" placeholder="예: 대형 콜라보 방송" style="display:none; flex:1; min-width:140px;" />
         <input type="date" id="rgStart" />
         <span style="color:var(--ink-soft)">~</span>
         <input type="date" id="rgEnd" />
@@ -124,7 +133,7 @@
     <div class="card">
       <h3>등록된 기간 일정</h3>
       <table id="rangeTable">
-        <thead><tr><th>기간</th><th>스트리머</th><th>라벨</th><th></th></tr></thead>
+        <thead><tr><th>기간</th><th>대상</th><th>라벨</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -259,31 +268,47 @@ async function delDay(id){
 }
 
 // ---------- 기간 일정 ----------
+document.getElementById('rgTargetStreamer').addEventListener('change', updateRgTargetUI);
+document.getElementById('rgTargetCustom').addEventListener('change', updateRgTargetUI);
+function updateRgTargetUI(){
+  const isCustom = document.getElementById('rgTargetCustom').checked;
+  document.getElementById('rgStreamer').style.display = isCustom ? 'none' : '';
+  document.getElementById('rgCustomName').style.display = isCustom ? '' : 'none';
+}
+
 async function loadRanges(){
   const { data } = await sb.from('range_events').select('*').order('start_date');
   const tbody = document.querySelector('#rangeTable tbody');
   tbody.innerHTML = (data || []).map(r => {
-    const s = STREAMERS.find(x => x.id === r.streamer_id) || { name:r.streamer_id, color:'#999' };
+    const targetHtml = r.streamer_id
+      ? (() => { const s = STREAMERS.find(x => x.id === r.streamer_id) || { name:r.streamer_id, color:'#999' };
+          return `<span class="swatch" style="background:${s.color}"></span>${s.name}`; })()
+      : `<span class="swatch" style="background:#8a8578"></span>${r.custom_name || '(제목 없음)'}`;
     return `<tr>
       <td>${r.start_date} ~ ${r.end_date}</td>
-      <td><span class="swatch" style="background:${s.color}"></span>${s.name}</td>
+      <td>${targetHtml}</td>
       <td>${r.label}</td>
       <td><button class="del-btn" onclick="delRange(${r.id})">삭제</button></td>
     </tr>`;
   }).join('');
 }
 document.getElementById('rgAddBtn').addEventListener('click', async () => {
-  const streamer_id = document.getElementById('rgStreamer').value;
+  const isCustom = document.getElementById('rgTargetCustom').checked;
+  const streamer_id = isCustom ? null : document.getElementById('rgStreamer').value;
+  const custom_name = isCustom ? document.getElementById('rgCustomName').value.trim() : null;
   const start_date = document.getElementById('rgStart').value;
   const end_date = document.getElementById('rgEnd').value;
   const label = document.getElementById('rgLabel').value.trim();
-  if(!streamer_id || !start_date || !end_date || !label){ alert('스트리머/시작일/종료일/라벨을 모두 입력해주세요.'); return; }
+  if(isCustom && !custom_name){ alert('직접 입력할 이름을 넣어주세요.'); return; }
+  if(!isCustom && !streamer_id){ alert('스트리머를 선택해주세요.'); return; }
+  if(!start_date || !end_date || !label){ alert('시작일/종료일/라벨을 모두 입력해주세요.'); return; }
   if(end_date < start_date){ alert('종료일이 시작일보다 빠를 수 없어요.'); return; }
-  const { error } = await sb.from('range_events').insert({ streamer_id, start_date, end_date, label });
+  const { error } = await sb.from('range_events').insert({ streamer_id, custom_name, start_date, end_date, label });
   if(error){ alert('추가 실패: ' + error.message); return; }
   document.getElementById('rgStart').value = '';
   document.getElementById('rgEnd').value = '';
   document.getElementById('rgLabel').value = '';
+  document.getElementById('rgCustomName').value = '';
   loadRanges();
 });
 async function delRange(id){

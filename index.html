@@ -220,8 +220,11 @@ function renderMonths(){
       const typeWord = e.type === 'birthday' ? '생일' : '주년';
       return `<span class="chip" style="background:${s.color}"><span class="l1">${icon} ${s.name}</span><span class="l2">${typeWord}</span></span>`;
     }).join('') + dayRanges.map(r => {
-      const s = STREAMERS[r.streamer_id] || { name:'?', color:'#999' };
-      return `<span class="chip range" style="background:${s.color}"><span class="l1">🧳 ${s.name}</span><span class="l2">${r.label}</span></span>`;
+      if(r.streamer_id){
+        const s = STREAMERS[r.streamer_id] || { name:'?', color:'#999' };
+        return `<span class="chip range" style="background:${s.color}"><span class="l1">🧳 ${s.name}</span><span class="l2">${r.label}</span></span>`;
+      }
+      return `<span class="chip range" style="background:#8a8578"><span class="l1">🎪 ${r.custom_name || '기간 일정'}</span><span class="l2">${r.label}</span></span>`;
     }).join('');
     cells += `<div class="cell${hasEvent?' has-event':''}${isToday?' today':''}"><span class="d">${day}</span>${chips}</div>`;
   }
@@ -229,7 +232,10 @@ function renderMonths(){
   const monthStart = `${year}-${String(month).padStart(2,'0')}-01`;
   const monthEnd = `${year}-${String(month).padStart(2,'0')}-${String(total).padStart(2,'0')}`;
   const monthRanges = RANGE_EVENTS.filter(r => r.start_date <= monthEnd && r.end_date >= monthStart);
-  const summaryItems = events.map(e=>e.label || '').concat(monthRanges.map(r => `${(STREAMERS[r.streamer_id]||{}).name || ''} ${r.label}`));
+  const summaryItems = events.map(e=>e.label || '').concat(monthRanges.map(r => {
+    const who = r.streamer_id ? ((STREAMERS[r.streamer_id]||{}).name || '') : (r.custom_name || '');
+    return `${who} ${r.label}`.trim();
+  }));
 
   document.getElementById('months').innerHTML = `
     <div class="month-block">
