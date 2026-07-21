@@ -17,7 +17,6 @@
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);}
-  html{ scroll-behavior:smooth; }
   body{
     font-family:'Gowun Dodum', sans-serif;
     width:760px;
@@ -40,9 +39,13 @@
     font-family:'Jua', sans-serif; font-size:14px; text-decoration:none;
     color:var(--ink-soft); background:var(--card); border:1px solid var(--line);
     padding:10px 20px; border-radius:20px; transition:all .15s ease;
+    cursor:pointer; -webkit-appearance:none; appearance:none;
   }
   .tab-link:hover{ background:#f2ece3; }
   .tab-link.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+
+  .panel{ display:none; }
+  .panel.active{ display:block; }
 
   .section-title{
     display:flex; align-items:baseline; gap:10px;
@@ -89,7 +92,7 @@
   .dow.sun{ color:#d9686f; } .dow.sat{ color:#4f8ef7; }
 
   .cell{
-    min-height:78px; border-radius:9px; padding:5px 5px 6px;
+    min-height:96px; border-radius:9px; padding:5px 5px 6px;
     background:#faf8f4; position:relative;
   }
   .cell.empty{ background:transparent; }
@@ -98,10 +101,12 @@
   .cell.today .d{ color:#fff; background:var(--ink); border-radius:50%; padding:1px 6px; }
 
   .chip{
-    margin-top:3px; font-size:11.5px; line-height:1.3;
-    padding:3px 6px; border-radius:10px; color:#fff;
-    display:block; white-space:normal; word-break:keep-all; overflow-wrap:break-word;
+    margin-top:4px; font-size:13px; line-height:1.35;
+    padding:4px 6px; border-radius:10px; color:#fff;
+    display:block; text-align:center;
   }
+  .chip .l1{ display:block; font-weight:500; }
+  .chip .l2{ display:block; font-size:11.5px; opacity:.9; }
   .chip.range{ box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.7); }
 
   .week-table{ width:100%; border-collapse:separate; border-spacing:0 7px; font-size:13px; }
@@ -136,38 +141,42 @@
   </div>
 
   <nav class="tabs">
-    <a href="#cal-section" class="tab-link active" data-target="cal-section">🎂 기념일 캘린더</a>
-    <a href="#sched-section" class="tab-link" data-target="sched-section">📡 방송 시간표</a>
+    <button class="tab-link active" data-target="panelCal">🎂 기념일 캘린더</button>
+    <button class="tab-link" data-target="panelSched">📡 방송 시간표</button>
   </nav>
 
-  <div class="section-title" id="cal-section">
-    <h2>🎂 기념일 캘린더</h2>
-    <span class="sub">생일 · 데뷔 주년</span>
-  </div>
-  <div class="pager">
-    <button id="prevBtn" class="pager-btn" aria-label="이전 달">‹</button>
-    <div class="pager-label">
-      <span id="pagerYear"></span>
-      <button id="todayBtn" class="today-btn">오늘</button>
+  <div id="panelCal" class="panel active">
+    <div class="section-title">
+      <h2>🎂 기념일 캘린더</h2>
+      <span class="sub">생일 · 데뷔 주년</span>
     </div>
-    <button id="nextBtn" class="pager-btn" aria-label="다음 달">›</button>
+    <div class="pager">
+      <button id="prevBtn" class="pager-btn" aria-label="이전 달">‹</button>
+      <div class="pager-label">
+        <span id="pagerYear"></span>
+        <button id="todayBtn" class="today-btn">오늘</button>
+      </div>
+      <button id="nextBtn" class="pager-btn" aria-label="다음 달">›</button>
+    </div>
+    <div id="months"><div class="loading">불러오는 중…</div></div>
   </div>
-  <div id="months"><div class="loading">불러오는 중…</div></div>
 
-  <div class="section-title" id="sched-section">
-    <h2>📡 주간 방송 시간표</h2>
-    <span class="sub">정규 방송 · 휴방</span>
-  </div>
-  <div class="month-block">
-    <table class="week-table">
-      <thead>
-        <tr>
-          <th></th>
-          <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th><th>일</th>
-        </tr>
-      </thead>
-      <tbody id="weekBody"><tr><td colspan="8" class="loading">불러오는 중…</td></tr></tbody>
-    </table>
+  <div id="panelSched" class="panel">
+    <div class="section-title">
+      <h2>📡 주간 방송 시간표</h2>
+      <span class="sub">정규 방송 · 휴방</span>
+    </div>
+    <div class="month-block">
+      <table class="week-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th><th>일</th>
+          </tr>
+        </thead>
+        <tbody id="weekBody"><tr><td colspan="8" class="loading">불러오는 중…</td></tr></tbody>
+      </table>
+    </div>
   </div>
 
 <script src="js/supabase-config.js"></script>
@@ -208,10 +217,11 @@ function renderMonths(){
     const chips = dayEvents.map(e => {
       const s = STREAMERS[e.streamer_id] || { name:'?', color:'#999' };
       const icon = e.type === 'birthday' ? '🎂' : '🎉';
-      return `<span class="chip" style="background:${s.color}">${icon} ${e.label || s.name}</span>`;
+      const typeWord = e.type === 'birthday' ? '생일' : '주년';
+      return `<span class="chip" style="background:${s.color}"><span class="l1">${icon} ${s.name}</span><span class="l2">${typeWord}</span></span>`;
     }).join('') + dayRanges.map(r => {
       const s = STREAMERS[r.streamer_id] || { name:'?', color:'#999' };
-      return `<span class="chip range" style="background:${s.color}">🧳 ${s.name} ${r.label}</span>`;
+      return `<span class="chip range" style="background:${s.color}"><span class="l1">🧳 ${s.name}</span><span class="l2">${r.label}</span></span>`;
     }).join('');
     cells += `<div class="cell${hasEvent?' has-event':''}${isToday?' today':''}"><span class="d">${day}</span>${chips}</div>`;
   }
@@ -291,17 +301,14 @@ loadData().catch(err => {
 });
 
 const tabLinks = document.querySelectorAll('.tab-link');
-const tabSections = Array.from(tabLinks).map(a => document.getElementById(a.dataset.target));
-function setActiveTab(id){
-  tabLinks.forEach(a => a.classList.toggle('active', a.dataset.target === id));
-}
-tabLinks.forEach(a => a.addEventListener('click', () => setActiveTab(a.dataset.target)));
-window.addEventListener('scroll', () => {
-  const y = window.scrollY + 120;
-  let current = tabSections[0].id;
-  tabSections.forEach(sec => { if(sec.offsetTop <= y) current = sec.id; });
-  setActiveTab(current);
-}, { passive:true });
+tabLinks.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabLinks.forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.target).classList.add('active');
+  });
+});
 </script>
 </body>
 </html>
