@@ -190,21 +190,31 @@ function kstNow(){
 }
 
 function renderDaysList(){
-  const nowYear = kstNow().getFullYear();
+  const now = kstNow();
+  const nowYear = now.getFullYear();
+  const todayKey = (now.getMonth() + 1) * 100 + now.getDate();
+
+  function effectiveYearAndKey(month, day){
+    const key = month * 100 + day;
+    const isPast = key < todayKey;
+    return { year: isPast ? nowYear + 1 : nowYear, sortKey: isPast ? key + 10000 : key };
+  }
+
   const dayItems = SPECIAL_DAYS.map(e => {
     const s = STREAMERS[e.streamer_id] || { name:'?', color:'#999' };
+    const { year: effYear, sortKey } = effectiveYearAndKey(e.month, e.day);
     let typeWord;
     if(e.type === 'birthday'){
       typeWord = '생일';
     } else if(s.debut_date){
       const debutYear = parseInt(s.debut_date.slice(0,4), 10);
-      const n = nowYear - debutYear;
+      const n = effYear - debutYear;
       typeWord = n > 0 ? `${n}주년` : '주년';
     } else {
       typeWord = '주년';
     }
     return {
-      sortKey: e.month * 100 + e.day,
+      sortKey,
       dateLabel: `${e.month}/${e.day}`,
       name: s.name,
       color: s.color,
@@ -214,9 +224,10 @@ function renderDaysList(){
   const rangeItems = RANGE_EVENTS.map(r => {
     const [sy, sm, sd] = r.start_date.split('-').map(Number);
     const [, em, ed] = r.end_date.split('-').map(Number);
+    const { sortKey } = effectiveYearAndKey(sm, sd);
     const s = r.streamer_id ? (STREAMERS[r.streamer_id] || { name:'?', color:'#999' }) : null;
     return {
-      sortKey: sm * 100 + sd,
+      sortKey,
       dateLabel: (sm === em && sd === ed) ? `${sm}/${sd}` : `${sm}/${sd}~${em}/${ed}`,
       name: s ? s.name : (r.custom_name || '기간 일정'),
       color: s ? s.color : '#8a8578',
