@@ -1,6 +1,9 @@
 // GET /api/soop-status?id={SOOP_BJ_ID}
-// SOOP(sooplive) station API를 프록시해서 온에어 여부를 반환.
-// 브라우저에서 직접 chapi.sooplive.co.kr를 호출하면 CORS에 막히므로 서버(Functions)에서 대신 호출.
+// 송민트(s5ngm2nt-svg/mint) 프로젝트에서 검증된 방식 그대로 이식.
+// openapi.sooplive.com/broad/list (공식 오픈API, client_id 필요)를 페이지네이션 돌며
+// 현재 방송 중인 리스트에서 해당 BJ user_id를 찾는다. 찾으면 방송중.
+const CLIENT_ID = 'fd019c2cbcd7cabdf1a7c7a7a94b2848';
+
 export async function onRequestGet({ request }) {
   const url = new URL(request.url);
   const id = url.searchParams.get('id');
@@ -13,22 +16,27 @@ export async function onRequestGet({ request }) {
   }
 
   try {
-    const res = await fetch(`https://chapi.sooplive.co.kr/api/${id}/station`, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
-    const data = await res.json();
-    const station = data.station || data;
+    let found = null;
+    const totalPages = 29; // 약 1700개 / 60개 per page (송민트 프로젝트에서 확인된 값)
 
-    // SOOP station API의 온에어 필드명이 정확히 확인되지 않아 방어적으로 여러 후보를 체크.
-    // 실제 응답(raw)을 같이 내려주니, 안 맞으면 devtools 네트워크탭에서 raw를 보고 필드명 확정 필요.
-    const isLive = !!(
-      station?.broad_no ||
-      station?.is_broad ||
-      station?.now_broad ||
-      (station?.broad && (station.broad.broad_no || station.broad.broad_title))
-    );
+    for (let page = 1; page <= totalPages; page++) {
+      const apiUrl = `https://openapi.sooplive.com/broad/list?client_id=${CLIENT_ID}&page_no=${page}`;
+      const res = await fetch(apiUrl, { headers: { Accept: 'application/json' } });
+      const json = await res.json();
+      const broads = Array.isArray(json.broad) ? json.broad : [];
 
-    return new Response(JSON.stringify({ isLive, raw: station }), {
+      found = broads.find(b => b.user_id === id) || null;
+      if (found) break;
+      if (broads.length < 60) break; // 마지막 페이지
+    }
+
+    return new Response(JSON.stringify({
+      isLive: !!found,
+      title: found?.broad_title || null,
+      viewers: found?.total_view_cnt || null,
+      startedAt: found?.broad_start || null,
+      broadNo: found?.broad_no || null
+    }), {
       headers: {
         'content-type': 'application/json',
         'cache-control': 'public, max-age=30'
@@ -41,3 +49,4 @@ export async function onRequestGet({ request }) {
     });
   }
 }
+
