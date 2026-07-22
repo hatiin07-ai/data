@@ -110,3 +110,7 @@ delete from public.special_days where streamer_id = 'mulchoco';
 delete from public.weekly_schedule where streamer_id = 'mulchoco';
 delete from public.range_events where streamer_id = 'mulchoco';
 delete from public.streamers where id = 'mulchoco';
+
+-- 6) 스트리머 채널 정보 (온에어 표시 + 방송국 바로가기용)
+alter table public.streamers add column if not exists channel_url text;
+alter table public.streamers add column if not exists soop_id text;

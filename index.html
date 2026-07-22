@@ -28,6 +28,22 @@
   .top{ text-align:center; margin-bottom:26px; }
   .top h1{ font-size:34px; margin:0; }
 
+  .streamer-strip{
+    display:flex; flex-wrap:wrap; justify-content:center; gap:8px;
+    margin:0 0 24px;
+  }
+  .streamer-chip{
+    display:flex; align-items:center; gap:7px;
+    padding:8px 13px; border-radius:20px; border:1px solid var(--line);
+    background:var(--card); text-decoration:none; color:var(--ink);
+    font-size:14px; cursor:pointer; transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .streamer-chip:hover{ transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,0,0,.06); }
+  .streamer-chip .live-dot{ width:8px; height:8px; border-radius:50%; background:#c9c2b8; flex:none; }
+  .streamer-chip.on .live-dot{ background:#3fbf6a; box-shadow:0 0 0 3px rgba(63,191,106,.18); }
+  .streamer-chip .status-word{ font-size:11px; color:var(--ink-soft); }
+  .streamer-chip.on .status-word{ color:#2f9e56; font-weight:600; }
+
   .tabs{ display:flex; justify-content:center; gap:10px; margin:0 0 26px; }
   .tab-link{
     font-family:'Jua', sans-serif; font-size:16px; text-decoration:none;
@@ -97,6 +113,8 @@
   <div class="top">
     <h1>버추얼 연간 캘린더</h1>
   </div>
+
+  <div class="streamer-strip" id="streamerStrip"></div>
 
   <nav class="tabs">
     <button class="tab-link active" data-target="panelCal">일정</button>
@@ -217,6 +235,34 @@ function renderWeek(){
   }).join('');
 }
 
+function renderStreamerStrip(){
+  const el = document.getElementById('streamerStrip');
+  const streamers = Object.values(STREAMERS);
+  el.innerHTML = streamers.map(s => {
+    const tag = s.channel_url ? 'a' : 'span';
+    const hrefAttr = s.channel_url ? ` href="${s.channel_url}" target="_blank" rel="noopener"` : '';
+    return `<${tag} class="streamer-chip" id="chip-${s.id}"${hrefAttr}>
+      <span class="live-dot"></span>
+      <span style="color:${s.color}; font-weight:600;">${s.name}</span>
+      <span class="status-word">OFF</span>
+    </${tag}>`;
+  }).join('');
+
+  streamers.filter(s => s.soop_id).forEach(s => {
+    fetch(`/api/soop-status?id=${encodeURIComponent(s.soop_id)}`)
+      .then(r => r.json())
+      .then(data => {
+        const chip = document.getElementById('chip-'+s.id);
+        if(!chip) return;
+        if(data.isLive){
+          chip.classList.add('on');
+          chip.querySelector('.status-word').textContent = 'ON AIR';
+        }
+      })
+      .catch(() => {});
+  });
+}
+
 async function loadData(){
   const sb = initSupabase();
   const [{ data: streamers }, { data: days }, { data: ranges }, { data: weekly }] = await Promise.all([
@@ -230,12 +276,13 @@ async function loadData(){
   SPECIAL_DAYS = days || [];
   RANGE_EVENTS = ranges || [];
   WEEKLY = weekly || [];
+  renderStreamerStrip();
   renderDaysList();
   renderWeek();
 }
 
 loadData().catch(err => {
-  document.getElementById('months').innerHTML = '<div class="note">데이터를 불러오지 못했어요.</div>';
+  document.getElementById('daysListBody').innerHTML = '<tr><td colspan="3" class="note">데이터를 불러오지 못했어요.</td></tr>';
   console.error(err);
 });
 

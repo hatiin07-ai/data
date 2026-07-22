@@ -162,13 +162,18 @@
         <input type="number" id="stSort" placeholder="순서" style="width:60px" />
         <button class="btn" id="stAddBtn">추가</button>
       </div>
+      <div class="form-row">
+        <input type="text" id="stChannelUrl" placeholder="방송국 URL (예: https://ch.sooplive.co.kr/BJID)" style="flex:1; min-width:200px" />
+        <input type="text" id="stSoopId" placeholder="SOOP 아이디(온에어 확인용)" style="max-width:160px" />
+      </div>
     </div>
     <div class="card">
       <h3>등록된 스트리머</h3>
       <table id="streamersTable">
-        <thead><tr><th>색</th><th>이름</th><th>id</th><th>순서</th><th></th></tr></thead>
+        <thead><tr><th>색</th><th>이름</th><th>id</th><th>방송국 URL</th><th>SOOP 아이디</th><th>순서</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
+      <div class="save-hint">방송국 URL / SOOP 아이디는 칸을 고치고 다른 곳을 클릭하면 자동 저장돼요.</div>
     </div>
   </div>
 </div>
@@ -365,21 +370,39 @@ async function loadStreamers(){
     <td><span class="swatch" style="background:${s.color}"></span></td>
     <td>${s.name}</td>
     <td>${s.id}</td>
+    <td><input type="text" value="${s.channel_url || ''}" placeholder="방송국 URL"
+      style="width:100%;min-width:150px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;font-family:inherit;"
+      onchange="saveStreamerField('${s.id}','channel_url',this.value)" /></td>
+    <td><input type="text" value="${s.soop_id || ''}" placeholder="SOOP 아이디"
+      style="width:100%;min-width:100px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;font-family:inherit;"
+      onchange="saveStreamerField('${s.id}','soop_id',this.value)" /></td>
     <td>${s.sort_order}</td>
     <td><button class="del-btn" onclick="delStreamer('${s.id}')">삭제</button></td>
   </tr>`).join('');
+}
+async function saveStreamerField(id, field, value){
+  const payload = {};
+  payload[field] = value.trim() || null;
+  const { error } = await sb.from('streamers').update(payload).eq('id', id);
+  if(error){ alert('저장 실패: ' + error.message); return; }
+  const s = STREAMERS.find(x => x.id === id);
+  if(s) s[field] = payload[field];
 }
 document.getElementById('stAddBtn').addEventListener('click', async () => {
   const id = document.getElementById('stId').value.trim();
   const name = document.getElementById('stName').value.trim();
   const color = document.getElementById('stColor').value;
   const sort_order = parseInt(document.getElementById('stSort').value, 10) || 0;
+  const channel_url = document.getElementById('stChannelUrl').value.trim() || null;
+  const soop_id = document.getElementById('stSoopId').value.trim() || null;
   if(!id || !name){ alert('id와 이름을 입력해주세요.'); return; }
-  const { error } = await sb.from('streamers').insert({ id, name, color, sort_order });
+  const { error } = await sb.from('streamers').insert({ id, name, color, sort_order, channel_url, soop_id });
   if(error){ alert('추가 실패: ' + error.message); return; }
   document.getElementById('stId').value = '';
   document.getElementById('stName').value = '';
   document.getElementById('stSort').value = '';
+  document.getElementById('stChannelUrl').value = '';
+  document.getElementById('stSoopId').value = '';
   loadAll();
 });
 async function delStreamer(id){
