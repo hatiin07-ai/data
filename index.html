@@ -183,11 +183,26 @@ function kstTodayDowIdx(){
   const kst = new Date(utcMs + 9 * 3600000);
   return (kst.getDay() + 6) % 7; // 0=월 ... 6=일, 브라우저 시간대 무관 KST 고정
 }
+function kstNow(){
+  const n = new Date();
+  const utcMs = n.getTime() + n.getTimezoneOffset() * 60000;
+  return new Date(utcMs + 9 * 3600000);
+}
 
 function renderDaysList(){
+  const nowYear = kstNow().getFullYear();
   const dayItems = SPECIAL_DAYS.map(e => {
     const s = STREAMERS[e.streamer_id] || { name:'?', color:'#999' };
-    const typeWord = e.type === 'birthday' ? '생일' : '주년';
+    let typeWord;
+    if(e.type === 'birthday'){
+      typeWord = '생일';
+    } else if(s.debut_date){
+      const debutYear = parseInt(s.debut_date.slice(0,4), 10);
+      const n = nowYear - debutYear;
+      typeWord = n > 0 ? `${n}주년` : '주년';
+    } else {
+      typeWord = '주년';
+    }
     return {
       sortKey: e.month * 100 + e.day,
       dateLabel: `${e.month}/${e.day}`,

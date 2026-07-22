@@ -114,3 +114,13 @@ delete from public.streamers where id = 'mulchoco';
 -- 6) 스트리머 채널 정보 (온에어 표시 + 방송국 바로가기용)
 alter table public.streamers add column if not exists channel_url text;
 alter table public.streamers add column if not exists soop_id text;
+
+-- 7) 데뷔일 (몇주년인지 계산용) — 아는 만큼만 채움. 두미(doomi)는 연도 미상이라 비워둠
+alter table public.streamers add column if not exists debut_date date;
+update public.streamers set debut_date = '2023-11-18' where id = 'jju';
+update public.streamers set debut_date = '2025-06-21' where id = 'qp';
+update public.streamers set debut_date = '2024-03-17' where id = 'hira';
+update public.streamers set debut_date = '2025-02-19' where id = 'kachu';
+update public.streamers set debut_date = '2025-03-12' where id = 'yami';
+update public.streamers set debut_date = '2025-07-19' where id = 'momong';
+update public.streamers set debut_date = '2026-01-24' where id = 'nyanya';
