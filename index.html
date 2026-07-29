@@ -220,28 +220,32 @@ function renderDaysList(){
     } else {
       typeWord = '주년';
     }
+    const isToday = e.month * 100 + e.day === todayKey;
     return {
       sortKey,
       dateLabel: `${e.month}/${e.day}`,
       name: s.name,
       color: s.color,
       typeWord,
-      isToday: e.month * 100 + e.day === todayKey
+      isHighlight: isToday,
+      badgeText: isToday ? '오늘' : null
     };
   });
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   const rangeItems = RANGE_EVENTS.map(r => {
     const [sy, sm, sd] = r.start_date.split('-').map(Number);
     const [, em, ed] = r.end_date.split('-').map(Number);
+    const isOngoing = todayStr >= r.start_date && todayStr <= r.end_date;
     const { sortKey } = effectiveYearAndKey(sm, sd);
     const s = r.streamer_id ? (STREAMERS[r.streamer_id] || { name:'?', color:'#999' }) : null;
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     return {
-      sortKey,
+      sortKey: isOngoing ? -1 : sortKey, // 기간중이면 무조건 최상단
       dateLabel: (sm === em && sd === ed) ? `${sm}/${sd}` : `${sm}/${sd}~${em}/${ed}`,
       name: s ? s.name : (r.custom_name || '기간 일정'),
       color: s ? s.color : '#8a8578',
       typeWord: r.label,
-      isToday: todayStr >= r.start_date && todayStr <= r.end_date
+      isHighlight: isOngoing,
+      badgeText: isOngoing ? '기간중' : null
     };
   });
   const sorted = dayItems.concat(rangeItems).sort((a,b) => a.sortKey - b.sortKey);
@@ -251,8 +255,8 @@ function renderDaysList(){
     tbody.innerHTML = `<tr><td colspan="3" class="loading">등록된 일정이 없어요.</td></tr>`;
     return;
   }
-  tbody.innerHTML = sorted.map(item => `<tr class="${item.isToday ? 'today-row' : ''}">
-      <td>${item.dateLabel}${item.isToday ? '<span class="today-badge">오늘</span>' : ''}</td>
+  tbody.innerHTML = sorted.map(item => `<tr class="${item.isHighlight ? 'today-row' : ''}">
+      <td>${item.dateLabel}${item.badgeText ? `<span class="today-badge">${item.badgeText}</span>` : ''}</td>
       <td><span class="name-cell"><span class="dot" style="background:${item.color}"></span>${item.name}</span></td>
       <td>${item.typeWord}</td>
     </tr>`).join('');
