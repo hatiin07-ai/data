@@ -104,6 +104,13 @@
   .list-table tbody td:last-child{ border-top:1px solid var(--line); border-bottom:1px solid var(--line); border-right:1px solid var(--line); border-radius:0 12px 12px 0; }
   .list-table tbody td:nth-child(2){ border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
   .list-table .name-cell{ justify-content:center; }
+  .list-table tr.today-row td{ background:#fdf0d5; }
+  .list-table tr.today-row td:first-child{ border-color:#e8b96a; }
+  .list-table tr.today-row td:last-child{ border-color:#e8b96a; }
+  .today-badge{
+    display:inline-block; margin-left:6px; font-size:11px; font-weight:700;
+    color:#fff; background:#e0973f; padding:2px 7px; border-radius:20px; vertical-align:middle;
+  }
   .sched-chip{
     display:inline-block; min-width:60px; padding:7px 6px; border-radius:10px;
     font-size:15px; color:var(--ink); line-height:1.2;
@@ -218,7 +225,8 @@ function renderDaysList(){
       dateLabel: `${e.month}/${e.day}`,
       name: s.name,
       color: s.color,
-      typeWord
+      typeWord,
+      isToday: e.month * 100 + e.day === todayKey
     };
   });
   const rangeItems = RANGE_EVENTS.map(r => {
@@ -226,12 +234,14 @@ function renderDaysList(){
     const [, em, ed] = r.end_date.split('-').map(Number);
     const { sortKey } = effectiveYearAndKey(sm, sd);
     const s = r.streamer_id ? (STREAMERS[r.streamer_id] || { name:'?', color:'#999' }) : null;
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     return {
       sortKey,
       dateLabel: (sm === em && sd === ed) ? `${sm}/${sd}` : `${sm}/${sd}~${em}/${ed}`,
       name: s ? s.name : (r.custom_name || '기간 일정'),
       color: s ? s.color : '#8a8578',
-      typeWord: r.label
+      typeWord: r.label,
+      isToday: todayStr >= r.start_date && todayStr <= r.end_date
     };
   });
   const sorted = dayItems.concat(rangeItems).sort((a,b) => a.sortKey - b.sortKey);
@@ -241,8 +251,8 @@ function renderDaysList(){
     tbody.innerHTML = `<tr><td colspan="3" class="loading">등록된 일정이 없어요.</td></tr>`;
     return;
   }
-  tbody.innerHTML = sorted.map(item => `<tr>
-      <td>${item.dateLabel}</td>
+  tbody.innerHTML = sorted.map(item => `<tr class="${item.isToday ? 'today-row' : ''}">
+      <td>${item.dateLabel}${item.isToday ? '<span class="today-badge">오늘</span>' : ''}</td>
       <td><span class="name-cell"><span class="dot" style="background:${item.color}"></span>${item.name}</span></td>
       <td>${item.typeWord}</td>
     </tr>`).join('');
