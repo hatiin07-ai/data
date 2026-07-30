@@ -137,12 +137,7 @@ let layout = '2x2'; // 2x2 | 1x4 | 4x1
 const gridEl = document.getElementById('grid');
 const statusEl = document.getElementById('status');
 
-// 프록시 모드: URL에 ?proxy=1 붙이면 PC UA 프록시로 로드 (모바일에서도 PC 플레이어 = 음소거 버튼 있음)
-var USE_PROXY = new URLSearchParams(location.search).get('proxy') === '1';
-function playerUrl(id){
-  if(USE_PROXY) return '/api/soop-pc?id=' + encodeURIComponent(id);
-  return 'https://play.sooplive.com/' + id + '/direct?fromApi=1';
-}
+function playerUrl(id){ return 'https://play.sooplive.com/' + id + '/direct?fromApi=1'; }
 
 function applyLayout(){
   gridEl.className = 'grid g-' + layout;
@@ -166,7 +161,6 @@ function buildGrid(){
       '<div class="cell-bar">' +
         '<span class="cell-num">' + (i+1) + '</span>' +
         '<span class="cell-name" id="name-' + i + '"></span>' +
-        '<button class="cell-btn cb-mute" data-mute="' + i + '" style="display:none">🔇</button>' +
         '<button class="cell-btn cb-clear" data-clear="' + i + '" style="display:none">✕ 제거</button>' +
       '</div>' +
       '<div class="cell-body" id="body-' + i + '"></div>';
@@ -182,17 +176,12 @@ function renderSlot(slot){
   const body = document.getElementById('body-' + slot);
   const nameEl = document.getElementById('name-' + slot);
   const clearBtn = cell.querySelector('.cb-clear');
-  const muteBtn = cell.querySelector('.cb-mute');
   if(!cell || !body) return;
 
   if(ch){
     cell.classList.remove('empty');
     nameEl.textContent = ch.name || ch.id;
     clearBtn.style.display = '';
-    muteBtn.style.display = '';
-    // 음소거 상태 아이콘 (muted면 🔇, 아니면 🔊)
-    muteBtn.textContent = ch.muted ? '🔇' : '🔊';
-    muteBtn.style.background = ch.muted ? '#5a2020' : '#2a5a3a';
     // 이미 같은 아이디의 iframe이 있으면 재로드하지 않음 (핵심)
     const existing = body.querySelector('iframe');
     if(!existing || existing.dataset.sid !== ch.id){
@@ -202,7 +191,6 @@ function renderSlot(slot){
     cell.classList.add('empty');
     nameEl.textContent = '비어 있음';
     clearBtn.style.display = 'none';
-    muteBtn.style.display = 'none';
     body.innerHTML =
       '<div class="cell-empty-msg">' +
         '<div style="font-size:12px;color:#666;margin-bottom:2px">스트리머 아이디를 입력하거나<br>상단 [＋ 스트리머 추가]에서 선택</div>' +
@@ -222,31 +210,21 @@ function mountPlayer(slot, id){
 }
 
 window.addEventListener('message', function(e){
-  // 프록시 모드면 iframe이 우리 origin(같은 도메인), 아니면 SOOP origin
-  var okOrigin = USE_PROXY ? (e.origin === location.origin) : (e.origin === 'https://play.sooplive.com');
-  if(!okOrigin) return;
-  // 메시지를 보낸 iframe을 찾아 실제 슬롯 번호(ifr-N)를 추출
-  let srcIframe = null;
-  document.querySelectorAll('.cell-body iframe').forEach(function(f){
-    if(f.contentWindow === e.source) srcIframe = f;
-  });
-  if(!srcIframe) return;
-  const slot = parseInt((srcIframe.id || '').replace('ifr-', ''), 10);
-  if(isNaN(slot)) return;
+  if(e.origin !== 'https://play.sooplive.com') return;
+  const iframes = document.querySelectorAll('.cell-body iframe');
+  const idx = Array.prototype.findIndex.call(iframes, function(f){ return e.source === f.contentWindow; });
+  if(idx < 0) return;
   const data = e.data || {};
-  // Pload 전송 대상: 프록시면 '*'(우리 도메인 iframe), 아니면 SOOP
-  var target = USE_PROXY ? '*' : 'https://play.sooplive.com';
   if(data.cmd === 'PonReady'){
-    const muted = !!(channels[slot] && channels[slot].muted);
     e.source.postMessage({
-      cmd: 'Pload', id: srcIframe.dataset.sid,
-      mutePlay: muted, showChat: false, autoPlay: true,
+      cmd: 'Pload', id: iframes[idx].dataset.sid,
+      mutePlay: false, showChat: false, autoPlay: true,
       isAdShow: true, showQualityBox: true, fromApi: '1'
-    }, target);
+    }, 'https://play.sooplive.com');
   } else if(data.cmd === 'PupdateBroadInfo'){
-    if(data.data && data.data.nick && channels[slot]){
-      channels[slot].name = data.data.nick;
-      const nameEl = document.getElementById('name-' + slot);
+    if(data.data && data.data.nick && channels[idx]){
+      channels[idx].name = data.data.nick;
+      const nameEl = document.getElementById('name-' + idx);
       if(nameEl) nameEl.textContent = data.data.nick;
     }
   }
@@ -266,20 +244,18 @@ function setSlot(slot, rawId, name){
   const id = extractId(rawId);
   if(!id) return;
   if(channels.some(function(c, i){ return c && c.id === id && i !== slot; })){ alert('이미 추가된 스트리머예요.'); return; }
-  channels[slot] = { id: id, name: name || id, muted: true };
+  channels[slot] = { id: id, name: name || id };
   renderSlot(slot); saveState();
 }
 function addChannel(id, name){
   const slot = channels.findIndex(function(c){ return !c; });
   if(slot < 0){ alert('2×2는 최대 4개까지예요. 하나를 제거하고 추가해주세요.'); return; }
   if(channels.some(function(c){ return c && c.id === id; })){ alert('이미 추가된 스트리머예요.'); return; }
-  channels[slot] = { id: id, name: name || id, muted: true };
+  channels[slot] = { id: id, name: name || id };
   renderSlot(slot); saveState();
 }
 function removeChannel(slot){ channels[slot] = null; renderSlot(slot); saveState(); }
 gridEl.addEventListener('click', function(e){
-  const mt = e.target.closest('[data-mute]');
-  if(mt){ toggleMute(+mt.dataset.mute); return; }
   const cl = e.target.closest('[data-clear]');
   if(cl){ removeChannel(+cl.dataset.clear); return; }
   const go = e.target.closest('[data-emptygo]');
@@ -289,22 +265,6 @@ gridEl.addEventListener('click', function(e){
     if(inp) setSlot(i, inp.value);
   }
 });
-
-// 음소거 토글: 상태 바꾸고 iframe 재로드 → Pload가 새 mutePlay 값으로 다시 나감
-function toggleMute(slot){
-  const ch = channels[slot];
-  if(!ch) return;
-  ch.muted = !ch.muted;
-  saveState();
-  // 버튼 아이콘 즉시 갱신
-  const muteBtn = document.getElementById('cell-' + slot).querySelector('.cb-mute');
-  if(muteBtn){
-    muteBtn.textContent = ch.muted ? '🔇' : '🔊';
-    muteBtn.style.background = ch.muted ? '#5a2020' : '#2a5a3a';
-  }
-  // 새 mute 상태로 재생하려면 재로드 필요 (SOOP은 실시간 mute 토글 커맨드 미공개)
-  mountPlayer(slot, ch.id);
-}
 gridEl.addEventListener('keydown', function(e){
   if(e.key === 'Enter' && e.target.classList.contains('empty-input')){
     const i = +e.target.id.replace('empty-inp-', '');
@@ -372,7 +332,7 @@ function autoPlaceLive(liveList){
   }
   list = list.slice(0, MAX);
   channels = new Array(MAX).fill(null);
-  list.forEach(function(s, i){ channels[i] = { id: s.soop_id, name: s.name || s.soop_id, muted: true }; });
+  list.forEach(function(s, i){ channels[i] = { id: s.soop_id, name: s.name || s.soop_id }; });
   for(let i = 0; i < MAX; i++) renderSlot(i);
   saveState();
 }
