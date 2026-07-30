@@ -84,6 +84,8 @@
   }
   .tab-link:hover{ background:#f2ece3; }
   .tab-link.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .tab-viewer{ color:#c2410c; border-color:#f0c9b0; background:#fff5ef; }
+  .tab-viewer:hover{ background:#ffe9dc; }
 
   .panel{ display:none; }
   .panel.active{ display:block; }
@@ -157,6 +159,7 @@
   <nav class="tabs">
     <button class="tab-link active" data-target="panelCal">일정</button>
     <button class="tab-link" data-target="panelSched">방송 시간표</button>
+    <a class="tab-link tab-viewer" href="/viewer/">📺 뷰어</a>
   </nav>
 
   <div id="panelCal" class="panel active">
@@ -384,6 +387,8 @@ loadData().catch(err => {
 
 const tabLinks = document.querySelectorAll('.tab-link');
 tabLinks.forEach(btn => {
+  // 뷰어 링크(a, data-target 없음)는 페이지 이동이므로 탭 전환 로직 제외
+  if(!btn.dataset.target) return;
   btn.addEventListener('click', () => {
     tabLinks.forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
