@@ -157,7 +157,7 @@ function mountPlayer(slot, id){
   const body = document.getElementById('body-'+slot);
   if(!body) return;
   body.innerHTML = '<iframe id="ifr-' + slot + '" data-sid="' + id + '" src="' + playerUrl(id) + '" ' +
-    'frameborder="0" scrolling="no" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe>';
+    'frameborder="0" scrolling="no" allowfullscreen allow="autoplay; fullscreen; encrypted-media; local-network-access; loopback-network"></iframe>';
 }
 
 window.addEventListener('message', function(e){
