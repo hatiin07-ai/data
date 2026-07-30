@@ -166,8 +166,39 @@ function renderGrid(){
 function mountPlayer(slot, bjId){
   const body = document.getElementById('body-'+slot);
   if(!body) return;
-  body.innerHTML = `<iframe src="${playerUrl(bjId, slot)}" allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe>`;
+  const fromApi = String(1000 + slot);
+  body.innerHTML = `<iframe id="ifr-${slot}" src="${playerUrl(bjId, slot)}"
+    allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe>`;
+  // WinForms 버전과 동일: play.sooplive.com이 PonReady를 보내면 Pload로 응답해 재생 시작.
+  // 각 칸마다 다른 fromApi를 실어 세션 구분 시도(F안).
+  const ifr = document.getElementById('ifr-'+slot);
+  ifr.dataset.bjId = bjId;
+  ifr.dataset.fromApi = fromApi;
 }
+
+// play.sooplive.com에서 오는 PonReady 수신 → 해당 iframe에 Pload 전송
+window.addEventListener('message', (e) => {
+  if(!/sooplive\.com$/.test(new URL(e.origin).hostname)) return;
+  const data = e.data;
+  if(!data || data.cmd !== 'PonReady') return;
+  // 어느 iframe에서 온 메시지인지 찾아서 그 칸의 bjId로 Pload
+  const iframes = document.querySelectorAll('.cell-body iframe, .focus-body iframe');
+  for(const ifr of iframes){
+    if(ifr.contentWindow === e.source){
+      ifr.contentWindow.postMessage({
+        cmd: 'Pload',
+        id: ifr.dataset.bjId,
+        mutePlay: false,
+        showChat: false,
+        autoPlay: true,
+        isAdShow: true,
+        showQualityBox: true,
+        fromApi: ifr.dataset.fromApi || '1'
+      }, 'https://play.sooplive.com');
+      break;
+    }
+  }
+});
 
 function extractBjId(raw){
   raw = (raw || '').trim();
@@ -229,7 +260,8 @@ function openFocus(slot){
       <button class="focus-close">✕ 닫기 (ESC)</button>
     </div>
     <div class="focus-body">
-      <iframe src="${playerUrl(channels[slot], slot)}" allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe>
+      <iframe id="focus-ifr" data-bj-id="${channels[slot]}" data-from-api="${1000+slot}"
+        src="${playerUrl(channels[slot], slot)}" allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe>
     </div>`;
   document.body.appendChild(ov);
   const close = () => ov.remove();
