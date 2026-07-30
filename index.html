@@ -29,7 +29,7 @@
   .top h1{ font-size:34px; margin:0; }
 
   .streamer-strip{
-    display:grid; grid-template-columns:repeat(4, 1fr); gap:10px;
+    display:grid; grid-template-columns:repeat(var(--chip-cols, 4), 1fr); gap:10px;
     margin:0 0 24px;
   }
   .streamer-chip{
@@ -323,17 +323,24 @@ function renderStreamerStrip(){
 
 async function loadData(){
   const sb = initSupabase();
-  const [{ data: streamers }, { data: days }, { data: ranges }, { data: weekly }] = await Promise.all([
+  const [{ data: streamers }, { data: days }, { data: ranges }, { data: weekly }, { data: settings }] = await Promise.all([
     sb.from('streamers').select('*').order('sort_order'),
     sb.from('special_days').select('*'),
     sb.from('range_events').select('*'),
-    sb.from('weekly_schedule').select('*')
+    sb.from('weekly_schedule').select('*'),
+    sb.from('site_settings').select('key,value')
   ]);
   STREAMERS = {};
   (streamers || []).forEach(s => { STREAMERS[s.id] = s; });
   SPECIAL_DAYS = days || [];
   RANGE_EVENTS = ranges || [];
   WEEKLY = weekly || [];
+
+  const chipCols = (settings || []).find(r => r.key === 'chip_columns');
+  if(chipCols && chipCols.value){
+    document.documentElement.style.setProperty('--chip-cols', chipCols.value);
+  }
+
   renderStreamerStrip();
   renderDaysList();
   renderWeek();

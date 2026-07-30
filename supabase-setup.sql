@@ -124,3 +124,17 @@ update public.streamers set debut_date = '2025-02-19' where id = 'kachu';
 update public.streamers set debut_date = '2025-03-12' where id = 'yami';
 update public.streamers set debut_date = '2025-07-19' where id = 'momong';
 update public.streamers set debut_date = '2026-01-24' where id = 'nyanya';
+
+-- 8) 사이트 설정 (스트리머 칩 그리드 열 개수 등)
+create table if not exists public.site_settings (
+  key text primary key,
+  value text
+);
+alter table public.site_settings enable row level security;
+drop policy if exists "public read site_settings" on public.site_settings;
+drop policy if exists "auth all site_settings" on public.site_settings;
+create policy "public read site_settings" on public.site_settings for select using (true);
+create policy "auth all site_settings" on public.site_settings for all to authenticated using (true) with check (true);
+
+insert into public.site_settings (key, value) values ('chip_columns', '4')
+on conflict (key) do nothing;

@@ -172,12 +172,59 @@
       </div>
     </div>
     <div class="card">
+      <h3>공개 페이지 칩 배열</h3>
+      <div class="form-row">
+        <label style="font-size:13px">한 줄에</label>
+        <select id="chipColumns">
+          <option value="1">1개</option>
+          <option value="2">2개</option>
+          <option value="3">3개</option>
+          <option value="4">4개</option>
+          <option value="5">5개</option>
+          <option value="6">6개</option>
+        </select>
+        <label style="font-size:13px">씩 배치</label>
+        <button class="btn small" id="chipColSaveBtn">저장</button>
+        <span id="chipColMsg" style="font-size:12px;color:var(--ink-soft)"></span>
+      </div>
+    </div>
+    <div class="card">
       <h3>등록된 스트리머</h3>
       <table id="streamersTable">
-        <thead><tr><th>색</th><th>이름</th><th>id</th><th>방송국 URL</th><th>SOOP 아이디</th><th>데뷔일</th><th>순서</th><th></th></tr></thead>
+        <thead><tr><th>색</th><th>이름</th><th>id</th><th>SOOP 아이디</th><th>데뷔일</th><th>순서</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
-      <div class="save-hint">방송국 URL / SOOP 아이디는 칸을 고치고 다른 곳을 클릭하면 자동 저장돼요.</div>
+    </div>
+  </div>
+</div>
+
+<div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:100;align-items:center;justify-content:center">
+  <div style="background:var(--card);border-radius:16px;padding:26px;width:min(420px,92vw);max-height:90vh;overflow:auto">
+    <h3 style="margin:0 0 18px;font-family:'Jua',sans-serif;font-size:17px">스트리머 수정</h3>
+    <input type="hidden" id="edId" />
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <label style="font-size:12.5px;color:var(--ink-soft)">이름
+        <input type="text" id="edName" style="width:100%;padding:9px 11px;margin-top:4px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit" />
+      </label>
+      <label style="font-size:12.5px;color:var(--ink-soft)">색상
+        <input type="color" id="edColor" style="width:100%;height:42px;padding:3px;margin-top:4px;border:1px solid var(--line);border-radius:8px" />
+      </label>
+      <label style="font-size:12.5px;color:var(--ink-soft)">방송국 URL
+        <input type="text" id="edChannelUrl" placeholder="https://..." style="width:100%;padding:9px 11px;margin-top:4px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit" />
+      </label>
+      <label style="font-size:12.5px;color:var(--ink-soft)">SOOP 아이디
+        <input type="text" id="edSoopId" style="width:100%;padding:9px 11px;margin-top:4px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit" />
+      </label>
+      <label style="font-size:12.5px;color:var(--ink-soft)">데뷔일
+        <input type="date" id="edDebutDate" style="width:100%;padding:9px 11px;margin-top:4px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit" />
+      </label>
+      <label style="font-size:12.5px;color:var(--ink-soft)">순서
+        <input type="number" id="edSort" style="width:100%;padding:9px 11px;margin-top:4px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit" />
+      </label>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:22px">
+      <button class="btn" id="edSaveBtn" style="flex:1">저장</button>
+      <button class="btn ghost" id="edCancelBtn" style="flex:1">취소</button>
     </div>
   </div>
 </div>
@@ -231,7 +278,7 @@ async function loadAll(){
   const { data: streamers } = await sb.from('streamers').select('*').order('sort_order');
   STREAMERS = streamers || [];
   fillStreamerSelect();
-  await Promise.all([ loadDays(), loadRanges(), loadWeek(), loadStreamers() ]);
+  await Promise.all([ loadDays(), loadRanges(), loadWeek(), loadStreamers(), loadChipColumns() ]);
 }
 
 function fillStreamerSelect(){
@@ -374,27 +421,63 @@ async function loadStreamers(){
     <td><span class="swatch" style="background:${s.color}"></span></td>
     <td>${s.name}</td>
     <td>${s.id}</td>
-    <td><input type="text" value="${s.channel_url || ''}" placeholder="방송국 URL"
-      style="width:100%;min-width:150px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;font-family:inherit;"
-      onchange="saveStreamerField('${s.id}','channel_url',this.value)" /></td>
-    <td><input type="text" value="${s.soop_id || ''}" placeholder="SOOP 아이디"
-      style="width:100%;min-width:100px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;font-family:inherit;"
-      onchange="saveStreamerField('${s.id}','soop_id',this.value)" /></td>
-    <td><input type="date" value="${s.debut_date || ''}"
-      style="padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;font-family:inherit;"
-      onchange="saveStreamerField('${s.id}','debut_date',this.value)" /></td>
+    <td>${s.soop_id || '-'}</td>
+    <td>${s.debut_date || '-'}</td>
     <td>${s.sort_order}</td>
-    <td><button class="del-btn" onclick="delStreamer('${s.id}')">삭제</button></td>
+    <td>
+      <button class="btn small" onclick="openEditModal('${s.id}')">수정</button>
+      <button class="del-btn" onclick="delStreamer('${s.id}')">삭제</button>
+    </td>
   </tr>`).join('');
 }
-async function saveStreamerField(id, field, value){
-  const payload = {};
-  payload[field] = (typeof value === 'string' ? value.trim() : value) || null;
+
+function openEditModal(id){
+  const s = STREAMERS.find(x => x.id === id);
+  if(!s) return;
+  document.getElementById('edId').value = s.id;
+  document.getElementById('edName').value = s.name || '';
+  document.getElementById('edColor').value = s.color || '#ef5da8';
+  document.getElementById('edChannelUrl').value = s.channel_url || '';
+  document.getElementById('edSoopId').value = s.soop_id || '';
+  document.getElementById('edDebutDate').value = s.debut_date || '';
+  document.getElementById('edSort').value = s.sort_order ?? 0;
+  document.getElementById('editModal').style.display = 'flex';
+}
+function closeEditModal(){ document.getElementById('editModal').style.display = 'none'; }
+document.getElementById('edCancelBtn').addEventListener('click', closeEditModal);
+document.getElementById('editModal').addEventListener('click', (e) => {
+  if(e.target.id === 'editModal') closeEditModal();
+});
+document.getElementById('edSaveBtn').addEventListener('click', async () => {
+  const id = document.getElementById('edId').value;
+  const payload = {
+    name: document.getElementById('edName').value.trim(),
+    color: document.getElementById('edColor').value,
+    channel_url: document.getElementById('edChannelUrl').value.trim() || null,
+    soop_id: document.getElementById('edSoopId').value.trim() || null,
+    debut_date: document.getElementById('edDebutDate').value || null,
+    sort_order: parseInt(document.getElementById('edSort').value, 10) || 0
+  };
+  if(!payload.name){ alert('이름을 입력해주세요.'); return; }
   const { error } = await sb.from('streamers').update(payload).eq('id', id);
   if(error){ alert('저장 실패: ' + error.message); return; }
-  const s = STREAMERS.find(x => x.id === id);
-  if(s) s[field] = payload[field];
+  closeEditModal();
+  loadAll();
+});
+
+// 공개 페이지 칩 배열 열 개수
+async function loadChipColumns(){
+  const { data } = await sb.from('site_settings').select('value').eq('key','chip_columns').maybeSingle();
+  document.getElementById('chipColumns').value = (data && data.value) || '4';
 }
+document.getElementById('chipColSaveBtn').addEventListener('click', async () => {
+  const value = document.getElementById('chipColumns').value;
+  const msg = document.getElementById('chipColMsg');
+  const { error } = await sb.from('site_settings').upsert({ key:'chip_columns', value }, { onConflict:'key' });
+  msg.textContent = error ? ('저장 실패: ' + error.message) : '저장됐어요!';
+  setTimeout(() => { msg.textContent = ''; }, 2500);
+});
+
 document.getElementById('stAddBtn').addEventListener('click', async () => {
   const id = document.getElementById('stId').value.trim();
   const name = document.getElementById('stName').value.trim();
