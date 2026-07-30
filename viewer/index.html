@@ -102,6 +102,10 @@
     <div class="chat-panel hidden" id="chatPanel">
       <div class="chat-head">
         <select id="chatSelect" aria-label="채팅 선택"></select>
+        <button id="chatPopBtn" title="새 창으로 채팅 열기" style="height:24px;border:none;border-radius:5px;background:#2a2a2a;color:#fff;cursor:pointer;font-size:11px;padding:0 8px;flex:none">↗ 새 창</button>
+      </div>
+      <div class="chat-hint" id="chatHint" style="display:none;padding:10px 12px;font-size:11.5px;color:#999;line-height:1.5;background:#1a1a1a;border-bottom:1px solid var(--line)">
+        채팅이 안 보이면 SOOP 로그인이 필요하거나 확장 프로그램 권한 문제일 수 있어요. <b>↗ 새 창</b>으로 열면 확실히 채팅을 볼 수 있어요.
       </div>
       <div class="chat-body"><iframe id="chatFrame" src="about:blank" allow="local-network-access; loopback-network"></iframe></div>
     </div>
@@ -266,6 +270,18 @@ function syncChat(){
   if(chatFrame.src !== target) chatFrame.src = target;
 }
 chatSelect.addEventListener('change', syncChat);
+document.getElementById('chatPopBtn').addEventListener('click', function(){
+  const v = chatSelect.value;
+  if(v && v !== 'about:blank'){
+    // 팝업 채팅 창 (SOOP 채팅 전용 URL)
+    window.open('https://play.sooplive.com/' + v + '/chat', 'soop_chat_' + v, 'width=420,height=640');
+  }
+});
+// 채팅 iframe이 로드됐는데 빈 화면일 가능성 대비: 힌트를 항상 표시
+function showChatHint(show){
+  const hint = document.getElementById('chatHint');
+  if(hint) hint.style.display = show ? 'block' : 'none';
+}
 document.getElementById('chatBtn').addEventListener('click', function(){
   const btn = document.getElementById('chatBtn');
   chatPanel.classList.toggle('hidden');
@@ -276,6 +292,7 @@ document.getElementById('chatBtn').addEventListener('click', function(){
       if(first) chatSelect.value = first.id;
     }
     syncChat();
+    showChatHint(true);
   }
 });
 
