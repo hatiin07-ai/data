@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=760" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>버추얼 연간 캘린더</title>
 <link rel="manifest" href="/manifest.json" />
 <meta name="theme-color" content="#ed83a8" />
@@ -27,7 +27,7 @@
   html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);}
   body{
     font-family:'A2z', sans-serif;
-    width:760px;
+    max-width:760px;
     margin:0 auto;
     padding:40px 28px 80px;
   }
@@ -152,6 +152,33 @@
 
   .note{ font-size:14px; color:var(--ink-soft); margin-top:14px; line-height:1.6; text-align:center; }
   .loading{ text-align:center; color:var(--ink-soft); font-size:15px; padding:40px 0; }
+  /* 폰 (~600px): 앱/PWA에서 자연스럽게 접히도록 */
+  @media (max-width: 600px){
+    body{ padding:20px 14px 60px; }
+    .top h1{ font-size:26px; }
+    .top{ margin-bottom:18px; }
+    /* 칩은 무조건 2열 (긴 이름도 들어가게) */
+    .streamer-strip{ grid-template-columns:1fr 1fr !important; gap:8px; margin-bottom:18px; }
+    .streamer-chip{ padding:8px 10px; gap:8px; }
+    .streamer-chip .avatar, .streamer-chip .avatar-fallback{ width:38px; height:38px; }
+    .streamer-chip .s-name{ font-size:17px; }
+    .tabs{ gap:7px; margin-bottom:20px; flex-wrap:wrap; }
+    .tab-link{ font-size:14px; padding:9px 16px; }
+    /* 일정 표 폰트/여백 축소 */
+    .list-table{ font-size:15px; border-spacing:0 6px; }
+    .list-table th{ font-size:12px; padding:0 6px 5px; }
+    .list-table td{ padding:11px 6px; }
+    .list-table th:nth-child(1), .list-table td:nth-child(1){ width:26%; }
+    .list-table th:nth-child(2), .list-table td:nth-child(2){ width:36%; }
+    .list-table th:nth-child(3), .list-table td:nth-child(3){ width:38%; }
+    h2{ font-size:20px; }
+    /* PWA 설치 바 여백 */
+    #pwaBar{ padding:6px 8px 0; }
+  }
+  /* 아주 좁은 폰 (~360px): 칩 1열 */
+  @media (max-width: 360px){
+    .streamer-strip{ grid-template-columns:1fr !important; }
+  }
 </style>
 </head>
 <body>
