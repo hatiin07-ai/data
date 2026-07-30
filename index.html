@@ -290,8 +290,10 @@ function renderStreamerStrip(){
   const el = document.getElementById('streamerStrip');
   const streamers = Object.values(STREAMERS);
   el.innerHTML = streamers.map(s => {
-    const tag = s.channel_url ? 'a' : 'span';
-    const hrefAttr = s.channel_url ? ` href="${s.channel_url}" target="_blank" rel="noopener"` : '';
+    // 오프라인 기본 링크 = 방송국 URL (없으면 soop_id로 자동 생성)
+    const stationUrl = s.channel_url || (s.soop_id ? `https://ch.sooplive.co.kr/${s.soop_id}` : null);
+    const tag = stationUrl ? 'a' : 'span';
+    const hrefAttr = stationUrl ? ` href="${stationUrl}" target="_blank" rel="noopener"` : '';
     const initial = (s.name || '?').charAt(0);
     const avatarHtml = s.soop_id
       ? `<img class="avatar" id="avatar-${s.id}" src="https://profile.img.sooplive.com/LOGO/${s.soop_id.slice(0,2)}/${s.soop_id}/${s.soop_id}.jpg"
@@ -315,6 +317,10 @@ function renderStreamerStrip(){
         if(data.isLive){
           chip.classList.add('on');
           chip.querySelector('.status-word').lastChild.textContent = 'ON AIR';
+          // 방송 중이면 방송국 대신 시청 페이지로 바로 이동
+          if(chip.tagName === 'A'){
+            chip.href = `https://play.sooplive.com/${s.soop_id}/`;
+          }
         }
       })
       .catch(() => {});
