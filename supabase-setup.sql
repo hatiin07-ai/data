@@ -138,3 +138,6 @@ create policy "auth all site_settings" on public.site_settings for all to authen
 
 insert into public.site_settings (key, value) values ('chip_columns', '4')
 on conflict (key) do nothing;
+
+-- 9) 이름 그라데이션 끝색 (시작색 = 기존 color, 끝색 = color2)
+alter table public.streamers add column if not exists color2 text;
