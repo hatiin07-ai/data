@@ -4,10 +4,12 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=760" />
 <title>버추얼 연간 캘린더</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+  @font-face { font-family:'A2z'; src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/에이투지체-4Regular.woff2') format('woff2'); font-weight:400; font-display:swap; }
+  @font-face { font-family:'A2z'; src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/에이투지체-5Medium.woff2') format('woff2'); font-weight:500; font-display:swap; }
+  @font-face { font-family:'A2z'; src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/에이투지체-7Bold.woff2') format('woff2'); font-weight:700; font-display:swap; }
+  @font-face { font-family:'A2z'; src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/에이투지체-8ExtraBold.woff2') format('woff2'); font-weight:800; font-display:swap; }
   :root{
     --paper:#fbf7f2;
     --ink:#2c2622;
@@ -18,12 +20,12 @@
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);}
   body{
-    font-family:'Gowun Dodum', sans-serif;
+    font-family:'A2z', sans-serif;
     width:760px;
     margin:0 auto;
     padding:40px 28px 80px;
   }
-  h1,h2,.month-name{font-family:'Jua', sans-serif; font-weight:400;}
+  h1,h2,.month-name{font-family:'A2z', sans-serif; font-weight:800;}
 
   .top{ text-align:center; margin-bottom:26px; }
   .top h1{ font-size:34px; margin:0; }
@@ -58,7 +60,6 @@
     position:absolute; inset:0; z-index:0;
     color:transparent;
     text-shadow:-1px 0 #1a1a1a, 1px 0 #1a1a1a, 0 -1px #1a1a1a, 0 1px #1a1a1a,
-                -1px -1px #1a1a1a, 1px -1px #1a1a1a, -1px 1px #1a1a1a, 1px 1px #1a1a1a,
                 0 0 5px var(--glow, rgba(255,255,255,.55));
     -webkit-text-fill-color:#1a1a1a;
     pointer-events:none;
@@ -76,7 +77,7 @@
 
   .tabs{ display:flex; justify-content:center; gap:10px; margin:0 0 26px; }
   .tab-link{
-    font-family:'Jua', sans-serif; font-size:16px; text-decoration:none;
+    font-family:'A2z', sans-serif; font-weight:700; font-size:16px; text-decoration:none;
     color:var(--ink-soft); background:var(--card); border:1px solid var(--line);
     padding:11px 22px; border-radius:20px; transition:all .15s ease;
     cursor:pointer; -webkit-appearance:none; appearance:none;

@@ -4,18 +4,20 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>관리 · 버추얼 캘린더</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+  @font-face { font-family:'A2z'; src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/에이투지체-4Regular.woff2') format('woff2'); font-weight:400; font-display:swap; }
+  @font-face { font-family:'A2z'; src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/에이투지체-5Medium.woff2') format('woff2'); font-weight:500; font-display:swap; }
+  @font-face { font-family:'A2z'; src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/에이투지체-7Bold.woff2') format('woff2'); font-weight:700; font-display:swap; }
+  @font-face { font-family:'A2z'; src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/에이투지체-8ExtraBold.woff2') format('woff2'); font-weight:800; font-display:swap; }
   :root{
     --paper:#f6f3ee; --ink:#2c2622; --ink-soft:#7d7168; --line:#e2dccf; --card:#ffffff;
     --danger:#d9686f;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);}
-  body{ font-family:'Gowun Dodum', sans-serif; }
-  h1,h2,.brand{ font-family:'Jua', sans-serif; font-weight:400; }
+  body{ font-family:'A2z', sans-serif; }
+  h1,h2,.brand{ font-family:'A2z', sans-serif; font-weight:800; }
 
   .wrap{ max-width:920px; margin:0 auto; padding:32px 24px 80px; }
   .top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
@@ -29,7 +31,7 @@
   .login-msg{ font-size:12.5px; color:var(--danger); margin-top:10px; min-height:16px; }
 
   .tabs{ display:flex; gap:8px; margin-bottom:24px; }
-  .tab-btn{ font-family:'Jua', sans-serif; font-size:13px; padding:8px 16px; border-radius:20px; border:1px solid var(--line); background:var(--card); color:var(--ink-soft); cursor:pointer; }
+  .tab-btn{ font-family:'A2z', sans-serif; font-weight:700; font-size:13px; padding:8px 16px; border-radius:20px; border:1px solid var(--line); background:var(--card); color:var(--ink-soft); cursor:pointer; }
   .tab-btn.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
   .panel{ display:none; }
   .panel.active{ display:block; }
@@ -200,7 +202,7 @@
 
 <div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:100;align-items:center;justify-content:center">
   <div style="background:var(--card);border-radius:16px;padding:26px;width:min(420px,92vw);max-height:90vh;overflow:auto">
-    <h3 style="margin:0 0 18px;font-family:'Jua',sans-serif;font-size:17px">스트리머 수정</h3>
+    <h3 style="margin:0 0 18px;font-family:'A2z',sans-serif;font-weight:800;font-size:17px">스트리머 수정</h3>
     <input type="hidden" id="edId" />
     <div style="display:flex;flex-direction:column;gap:12px">
       <label style="font-size:12.5px;color:var(--ink-soft)">이름
