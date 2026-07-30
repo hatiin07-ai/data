@@ -51,8 +51,15 @@
   .cell-body iframe{ width:100%; height:100%; border:0; display:block; }
   .cell-empty-msg{
     position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
-    color:#555; font-size:13px; gap:10px; pointer-events:none;
+    color:#555; font-size:13px; gap:10px; text-align:center; padding:12px;
   }
+  .empty-input-row{ display:flex; gap:5px; pointer-events:auto; }
+  .empty-input{
+    width:180px; height:30px; background:#222; border:1px solid #3a3a3a; border-radius:6px;
+    color:#fff; font-size:12px; font-family:inherit; padding:0 10px;
+  }
+  .empty-input::placeholder{ color:#666; }
+  .empty-go{ height:30px; border:none; border-radius:6px; background:#1e6446; color:#fff; cursor:pointer; font-size:12px; font-family:inherit; padding:0 12px; }
 
   .chat-panel{ width:340px; flex:none; display:flex; flex-direction:column; background:#0a0a0a; border-left:1px solid var(--line); }
   .chat-panel.hidden{ display:none; }
@@ -131,7 +138,14 @@ function renderGrid(){
         (ch ? '<button class="cell-btn cb-clear" data-clear="' + i + '">✕ 제거</button>' : '') +
       '</div>' +
       '<div class="cell-body" id="body-' + i + '">' +
-        (ch ? '' : '<div class="cell-empty-msg">＋ 스트리머 추가<br><small style="color:#444">상단 버튼에서 선택</small></div>') +
+        (ch ? '' :
+          '<div class="cell-empty-msg">' +
+            '<div style="font-size:12px;color:#666;margin-bottom:2px">스트리머 아이디를 입력하거나<br>상단 [＋ 스트리머 추가]에서 선택</div>' +
+            '<div class="empty-input-row">' +
+              '<input class="empty-input" id="empty-inp-' + i + '" placeholder="아이디 또는 방송 URL" />' +
+              '<button class="empty-go" data-emptygo="' + i + '">로드</button>' +
+            '</div>' +
+          '</div>') +
       '</div>';
     gridEl.appendChild(cell);
     if(ch) mountPlayer(i, ch.id);
@@ -168,6 +182,23 @@ window.addEventListener('message', function(e){
   }
 });
 
+function extractId(raw){
+  raw = (raw || '').trim();
+  if(!raw) return '';
+  if(!/^https?:\/\//i.test(raw) && !raw.includes('/')) return raw; // 아이디만
+  try{
+    const u = new URL(raw.startsWith('http') ? raw : 'https://' + raw);
+    const parts = u.pathname.split('/').filter(Boolean);
+    return parts[0] || '';
+  }catch(e){ return raw; }
+}
+function setSlot(slot, rawId, name){
+  const id = extractId(rawId);
+  if(!id) return;
+  if(channels.some(function(c, i){ return c && c.id === id && i !== slot; })){ alert('이미 추가된 스트리머예요.'); return; }
+  channels[slot] = { id: id, name: name || id };
+  renderGrid(); saveState();
+}
 function addChannel(id, name){
   const slot = channels.findIndex(function(c){ return !c; });
   if(slot < 0){ alert('2×2는 최대 4개까지예요. 하나를 제거하고 추가해주세요.'); return; }
@@ -178,7 +209,19 @@ function addChannel(id, name){
 function removeChannel(slot){ channels[slot] = null; renderGrid(); saveState(); }
 gridEl.addEventListener('click', function(e){
   const cl = e.target.closest('[data-clear]');
-  if(cl) removeChannel(+cl.dataset.clear);
+  if(cl){ removeChannel(+cl.dataset.clear); return; }
+  const go = e.target.closest('[data-emptygo]');
+  if(go){
+    const i = +go.dataset.emptygo;
+    const inp = document.getElementById('empty-inp-' + i);
+    if(inp) setSlot(i, inp.value);
+  }
+});
+gridEl.addEventListener('keydown', function(e){
+  if(e.key === 'Enter' && e.target.classList.contains('empty-input')){
+    const i = +e.target.id.replace('empty-inp-', '');
+    setSlot(i, e.target.value);
+  }
 });
 
 function refreshChatOptions(){
