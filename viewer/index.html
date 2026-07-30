@@ -79,12 +79,19 @@
   .picker-head{ grid-column:1/-1; font-size:11px; color:#888; padding:2px 4px; }
 
   /* 모바일 (~820px): 채팅 기능 잠금 + 세로 스택 배열 */
+  /* 모바일 (~820px): 배열 전환 유지 + 세로 스크롤 (화면 밖 칸까지 스와이프로 볼 수 있게) */
   @media (max-width: 820px){
-    .btn-layout{ display:none !important; }
-    .toolbar{ height:auto; min-height:48px; padding:6px 10px; flex-wrap:wrap; gap:6px; }
+    body{ overflow-y:auto; -webkit-overflow-scrolling:touch; }
+    .toolbar{ position:sticky; top:0; z-index:40; height:auto; min-height:48px; padding:6px 10px; flex-wrap:wrap; gap:6px; }
     .toolbar .title small{ display:none; }
-    /* 모바일은 배열 무시하고 무조건 세로 1열 스택 */
-    .grid{ grid-template-columns:1fr !important; grid-template-rows:none !important; grid-auto-rows:56vw; }
+    .btn-add, .btn-layout{ font-size:12px; padding:0 10px; }
+    .main{ display:block; min-height:0; }
+    /* 그리드가 내용 높이만큼 늘어나게 (flex 고정 해제) → 넘치면 body가 스크롤 */
+    .grid{ display:grid; height:auto; }
+    /* 배열별 칸 높이 고정: 세로로 쌓이면 스크롤 */
+    .grid.g-2x2{ grid-template-columns:1fr 1fr; grid-template-rows:none; grid-auto-rows:28vh; }
+    .grid.g-1x4{ grid-template-columns:1fr; grid-template-rows:none; grid-auto-rows:32vh; }
+    .grid.g-4x1{ grid-template-columns:1fr; grid-template-rows:none; grid-auto-rows:32vh; } /* 모바일에선 4×1도 세로로(가로 4칸은 너무 좁음) */
     .cell-bar{ opacity:1 !important; position:static !important; }
     .cell.empty .empty-input{ width:150px; }
   }
