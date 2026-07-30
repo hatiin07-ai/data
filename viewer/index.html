@@ -57,6 +57,14 @@
   .cb-clear{ background:#5a2020; }
   .cell-body{ flex:1; min-height:0; position:relative; background:#000; }
   .cell-body iframe{ width:100%; height:100%; border:0; display:block; }
+  .sound-overlay{
+    position:absolute; left:50%; bottom:14px; transform:translateX(-50%);
+    z-index:8; border:none; border-radius:22px; cursor:pointer;
+    background:rgba(63,191,106,.92); color:#fff; font-family:inherit; font-weight:700;
+    font-size:13px; padding:10px 18px; box-shadow:0 3px 12px rgba(0,0,0,.4);
+    display:flex; align-items:center; gap:5px;
+  }
+  .sound-overlay:hover{ background:rgba(63,191,106,1); }
   .cell-empty-msg{
     position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
     color:#555; font-size:13px; gap:10px; text-align:center; padding:12px;
@@ -205,26 +213,36 @@ function renderSlot(slot){
 function mountPlayer(slot, id){
   const body = document.getElementById('body-'+slot);
   if(!body) return;
-  body.innerHTML = '<iframe id="ifr-' + slot + '" data-sid="' + id + '" src="' + playerUrl(id) + '" ' +
-    'frameborder="0" scrolling="no" allowfullscreen allow="autoplay; fullscreen; encrypted-media; local-network-access; loopback-network"></iframe>';
+  var muted = !(channels[slot] && channels[slot].soundOn); // soundOn 아니면 음소거로 시작
+  body.innerHTML =
+    '<iframe id="ifr-' + slot + '" data-sid="' + id + '" src="' + playerUrl(id) + '" ' +
+      'frameborder="0" scrolling="no" allowfullscreen allow="autoplay; fullscreen; encrypted-media; local-network-access; loopback-network"></iframe>' +
+    (muted ? '<button class="sound-overlay" data-sound="' + slot + '">🔊 소리 켜기</button>' : '');
 }
 
 window.addEventListener('message', function(e){
   if(e.origin !== 'https://play.sooplive.com') return;
-  const iframes = document.querySelectorAll('.cell-body iframe');
-  const idx = Array.prototype.findIndex.call(iframes, function(f){ return e.source === f.contentWindow; });
-  if(idx < 0) return;
+  let srcIframe = null;
+  document.querySelectorAll('.cell-body iframe').forEach(function(f){
+    if(f.contentWindow === e.source) srcIframe = f;
+  });
+  if(!srcIframe) return;
+  const slot = parseInt((srcIframe.id || '').replace('ifr-', ''), 10);
+  if(isNaN(slot)) return;
   const data = e.data || {};
   if(data.cmd === 'PonReady'){
+    // 모바일 자동재생 정책상 소리 있는 자동재생은 막힘 → 기본 음소거로 시작.
+    // 사용자가 "소리 켜기"를 탭하면 soundOn=true로 다시 로드됨(제스처 후라 허용).
+    const soundOn = !!(channels[slot] && channels[slot].soundOn);
     e.source.postMessage({
-      cmd: 'Pload', id: iframes[idx].dataset.sid,
-      mutePlay: false, showChat: false, autoPlay: true,
+      cmd: 'Pload', id: srcIframe.dataset.sid,
+      mutePlay: !soundOn, showChat: false, autoPlay: true,
       isAdShow: true, showQualityBox: true, fromApi: '1'
     }, 'https://play.sooplive.com');
   } else if(data.cmd === 'PupdateBroadInfo'){
-    if(data.data && data.data.nick && channels[idx]){
-      channels[idx].name = data.data.nick;
-      const nameEl = document.getElementById('name-' + idx);
+    if(data.data && data.data.nick && channels[slot]){
+      channels[slot].name = data.data.nick;
+      const nameEl = document.getElementById('name-' + slot);
       if(nameEl) nameEl.textContent = data.data.nick;
     }
   }
@@ -255,7 +273,18 @@ function addChannel(id, name){
   renderSlot(slot); saveState();
 }
 function removeChannel(slot){ channels[slot] = null; renderSlot(slot); saveState(); }
+
+// 사용자 제스처(탭) 직후 소리 켜서 재로드 → 모바일 브라우저가 unmute 허용
+function turnSoundOn(slot){
+  const ch = channels[slot];
+  if(!ch) return;
+  ch.soundOn = true;
+  saveState();
+  mountPlayer(slot, ch.id); // mutePlay:false로 다시 로드 (제스처 직후라 소리 남)
+}
 gridEl.addEventListener('click', function(e){
+  const snd = e.target.closest('[data-sound]');
+  if(snd){ turnSoundOn(+snd.dataset.sound); return; }
   const cl = e.target.closest('[data-clear]');
   if(cl){ removeChannel(+cl.dataset.clear); return; }
   const go = e.target.closest('[data-emptygo]');
