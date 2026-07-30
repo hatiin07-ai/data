@@ -137,7 +137,12 @@ let layout = '2x2'; // 2x2 | 1x4 | 4x1
 const gridEl = document.getElementById('grid');
 const statusEl = document.getElementById('status');
 
-function playerUrl(id){ return 'https://play.sooplive.com/' + id + '/direct?fromApi=1'; }
+// 프록시 모드: URL에 ?proxy=1 붙이면 PC UA 프록시로 로드 (모바일에서도 PC 플레이어 = 음소거 버튼 있음)
+var USE_PROXY = new URLSearchParams(location.search).get('proxy') === '1';
+function playerUrl(id){
+  if(USE_PROXY) return '/api/soop-pc?id=' + encodeURIComponent(id);
+  return 'https://play.sooplive.com/' + id + '/direct?fromApi=1';
+}
 
 function applyLayout(){
   gridEl.className = 'grid g-' + layout;
@@ -217,7 +222,9 @@ function mountPlayer(slot, id){
 }
 
 window.addEventListener('message', function(e){
-  if(e.origin !== 'https://play.sooplive.com') return;
+  // 프록시 모드면 iframe이 우리 origin(같은 도메인), 아니면 SOOP origin
+  var okOrigin = USE_PROXY ? (e.origin === location.origin) : (e.origin === 'https://play.sooplive.com');
+  if(!okOrigin) return;
   // 메시지를 보낸 iframe을 찾아 실제 슬롯 번호(ifr-N)를 추출
   let srcIframe = null;
   document.querySelectorAll('.cell-body iframe').forEach(function(f){
@@ -227,13 +234,15 @@ window.addEventListener('message', function(e){
   const slot = parseInt((srcIframe.id || '').replace('ifr-', ''), 10);
   if(isNaN(slot)) return;
   const data = e.data || {};
+  // Pload 전송 대상: 프록시면 '*'(우리 도메인 iframe), 아니면 SOOP
+  var target = USE_PROXY ? '*' : 'https://play.sooplive.com';
   if(data.cmd === 'PonReady'){
     const muted = !!(channels[slot] && channels[slot].muted);
     e.source.postMessage({
       cmd: 'Pload', id: srcIframe.dataset.sid,
       mutePlay: muted, showChat: false, autoPlay: true,
       isAdShow: true, showQualityBox: true, fromApi: '1'
-    }, 'https://play.sooplive.com');
+    }, target);
   } else if(data.cmd === 'PupdateBroadInfo'){
     if(data.data && data.data.nick && channels[slot]){
       channels[slot].name = data.data.nick;
