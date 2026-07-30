@@ -123,19 +123,11 @@ const statusEl = document.getElementById('status');
 function total(){ return cols * rows; }
 
 // ── SOOP direct 플레이어 URL 생성 ──────────────────────────
-// WinForms 버전과 동일하게 play.sooplive.com/{id}/direct 사용.
-// 각 칸마다 fromApi 값을 다르게 줘서 세션 구분되는지 테스트 (F안).
+// 순수 play.sooplive.com/{id}/direct 가 잘 뜨므로 그대로 사용.
+// F안 테스트: 세션 구분용으로 fromApi만 칸마다 다르게 부여(잉여 파라미터는 붙이지 않음).
 function playerUrl(bjId, slot){
   const fromApi = 1000 + slot; // 칸마다 다른 값
-  const params = new URLSearchParams({
-    szBjId: bjId,
-    fromApi: String(fromApi),
-    bMute: 'false',
-    bChat: 'false',
-    autoPlay: 'true',
-    _t: String(Date.now() + slot) // 캐시 회피 + 구분
-  });
-  return `https://play.sooplive.com/${bjId}/direct?${params.toString()}`;
+  return `https://play.sooplive.com/${bjId}/direct?fromApi=${fromApi}`;
 }
 
 // ── 그리드 렌더 ────────────────────────────────────────────
