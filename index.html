@@ -473,11 +473,15 @@ tabLinks.forEach(btn => {
   const isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const isAndroid = /android/i.test(ua);
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  // 모바일 판정: 모바일 UA이거나 (터치 지원 + 좁은 화면)
+  const isMobile = isIOS || isAndroid || /mobile|tablet/i.test(ua) ||
+                   (('ontouchstart' in window || navigator.maxTouchPoints > 0) && window.innerWidth <= 900);
 
   // 이미 설치(앱으로 실행 중)면 버튼 숨김
   if(isStandalone){ return; }
 
-  // 설치 버튼은 항상 노출 (iOS는 자동 프롬프트가 없으므로 안내용으로도 필요)
+  // 모바일 환경에서만 설치 버튼 노출 (데스크탑은 숨김)
+  if(!isMobile){ return; }
   bar.style.display = 'flex';
 
   // 안드로이드/데스크탑: 설치 프롬프트 확보
