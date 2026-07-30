@@ -1,0 +1,19 @@
+{
+  "name": "버추얼 연간 캘린더",
+  "short_name": "버추얼캘린더",
+  "description": "SOOP 스트리머 일정·방송 시간표·멀티뷰어",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf6f0",
+  "theme_color": "#ed83a8",
+  "icons": [
+    { "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "멀티뷰어", "short_name": "뷰어", "url": "/viewer/", "description": "2×2 멀티뷰어 바로 열기" }
+  ]
+}

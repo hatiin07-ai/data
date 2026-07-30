@@ -4,6 +4,12 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=760" />
 <title>버추얼 연간 캘린더</title>
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#ed83a8" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="버추얼캘린더" />
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   @font-face { font-family:'A2z'; src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/에이투지체-4Regular.woff2') format('woff2'); font-weight:400; font-display:swap; }
@@ -149,6 +155,46 @@
 </style>
 </head>
 <body>
+
+  <div id="pwaBar" style="display:none;justify-content:center;padding:10px 12px 0">
+    <button id="pwaInstallBtn" style="font-family:'A2z',sans-serif;font-weight:700;font-size:14px;color:#fff;background:#ed83a8;border:none;border-radius:22px;padding:10px 20px;cursor:pointer;box-shadow:0 3px 10px rgba(237,131,168,.35);display:flex;align-items:center;gap:7px">
+      📲 앱으로 설치하기
+    </button>
+  </div>
+
+  <div id="pwaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:16px">
+    <div style="background:#fff;border-radius:18px;max-width:420px;width:100%;max-height:88vh;overflow:auto;padding:24px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <img src="/assets/icon-192.png" style="width:44px;height:44px;border-radius:11px" alt="" />
+        <div>
+          <div style="font-family:'A2z',sans-serif;font-weight:800;font-size:17px;color:#2c2622">앱으로 설치하기</div>
+          <div style="font-size:12px;color:#8a8178">홈 화면에서 앱처럼 바로 열려요</div>
+        </div>
+      </div>
+      <div id="pwaGuideAndroid" style="display:none;font-size:13.5px;color:#4a443e;line-height:1.7">
+        <b style="color:#ed83a8">안드로이드 · 삼성폰</b><br>
+        아래 <b>[설치]</b> 버튼을 누르면 바로 홈 화면에 추가돼요.<br>
+        <button id="pwaDoInstall" style="margin-top:14px;width:100%;font-family:'A2z',sans-serif;font-weight:700;font-size:14px;color:#fff;background:#ed83a8;border:none;border-radius:12px;padding:12px;cursor:pointer">홈 화면에 설치</button>
+      </div>
+      <div id="pwaGuideIOS" style="display:none;font-size:13.5px;color:#4a443e;line-height:1.75">
+        <b style="color:#c2410c">아이폰 · 아이패드 (Safari)</b><br>
+        아이폰은 자동 설치가 없어서 직접 추가해야 해요:<br><br>
+        <div style="background:#faf6f0;border-radius:10px;padding:12px">
+          1️⃣ 하단 <b>공유 버튼</b> <span style="display:inline-block;border:1px solid #ccc;border-radius:5px;padding:0 6px">⬆️</span> 을 눌러요<br>
+          2️⃣ 목록에서 <b>"홈 화면에 추가"</b> 를 선택<br>
+          3️⃣ 우측 상단 <b>"추가"</b> 를 누르면 완료!
+        </div>
+        <div style="margin-top:12px;font-size:12px;color:#a09890">⚠️ 반드시 <b>Safari</b>에서 열어야 해요. 크롬·웨일에선 설치가 안 돼요.</div>
+      </div>
+      <div id="pwaGuideDesktop" style="display:none;font-size:13.5px;color:#4a443e;line-height:1.75">
+        <b style="color:#ed83a8">PC (크롬·엣지)</b><br>
+        주소창 오른쪽 끝의 <b>설치 아이콘</b> <span style="display:inline-block;border:1px solid #ccc;border-radius:5px;padding:0 6px">⊕</span> 을 누르거나,<br>
+        아래 <b>[설치]</b> 버튼을 눌러주세요.<br>
+        <button id="pwaDoInstallDesktop" style="margin-top:14px;width:100%;font-family:'A2z',sans-serif;font-weight:700;font-size:14px;color:#fff;background:#ed83a8;border:none;border-radius:12px;padding:12px;cursor:pointer">설치하기</button>
+      </div>
+      <button id="pwaModalClose" style="margin-top:16px;width:100%;font-family:'A2z',sans-serif;font-weight:700;font-size:13px;color:#8a8178;background:#f2ece3;border:none;border-radius:12px;padding:11px;cursor:pointer">닫기</button>
+    </div>
+  </div>
 
   <div class="top">
     <h1>버추얼 연간 캘린더</h1>
@@ -396,6 +442,71 @@ tabLinks.forEach(btn => {
     document.getElementById(btn.dataset.target).classList.add('active');
   });
 });
+
+// ── PWA 설치 ───────────────────────────────────────────────
+(function(){
+  // 서비스워커 등록
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('/sw.js').catch(function(){});
+    });
+  }
+
+  const bar = document.getElementById('pwaBar');
+  const installBtn = document.getElementById('pwaInstallBtn');
+  const modal = document.getElementById('pwaModal');
+  let deferredPrompt = null;
+
+  // 플랫폼 감지
+  const ua = navigator.userAgent || '';
+  const isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isAndroid = /android/i.test(ua);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+  // 이미 설치(앱으로 실행 중)면 버튼 숨김
+  if(isStandalone){ return; }
+
+  // 설치 버튼은 항상 노출 (iOS는 자동 프롬프트가 없으므로 안내용으로도 필요)
+  bar.style.display = 'flex';
+
+  // 안드로이드/데스크탑: 설치 프롬프트 확보
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    deferredPrompt = e;
+  });
+
+  function showGuide(){
+    document.getElementById('pwaGuideAndroid').style.display = 'none';
+    document.getElementById('pwaGuideIOS').style.display = 'none';
+    document.getElementById('pwaGuideDesktop').style.display = 'none';
+    if(isIOS) document.getElementById('pwaGuideIOS').style.display = 'block';
+    else if(isAndroid) document.getElementById('pwaGuideAndroid').style.display = 'block';
+    else document.getElementById('pwaGuideDesktop').style.display = 'block';
+    modal.style.display = 'flex';
+  }
+
+  async function doInstall(){
+    if(deferredPrompt){
+      deferredPrompt.prompt();
+      try{ await deferredPrompt.userChoice; }catch(e){}
+      deferredPrompt = null;
+      modal.style.display = 'none';
+      bar.style.display = 'none';
+    } else {
+      // 프롬프트가 아직 없으면 안내만 (사용자가 조금 후 다시 시도하거나 주소창 아이콘 사용)
+      alert('설치 버튼이 준비 중이에요. 잠시 후 다시 시도하거나, 브라우저 주소창의 설치 아이콘을 이용해주세요.');
+    }
+  }
+
+  installBtn.addEventListener('click', showGuide);
+  document.getElementById('pwaDoInstall').addEventListener('click', doInstall);
+  document.getElementById('pwaDoInstallDesktop').addEventListener('click', doInstall);
+  document.getElementById('pwaModalClose').addEventListener('click', function(){ modal.style.display = 'none'; });
+  modal.addEventListener('click', function(e){ if(e.target === modal) modal.style.display = 'none'; });
+
+  // 설치 완료되면 버튼 숨김
+  window.addEventListener('appinstalled', function(){ bar.style.display = 'none'; modal.style.display = 'none'; });
+})();
 </script>
 </body>
 </html>
