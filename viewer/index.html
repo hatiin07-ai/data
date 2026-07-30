@@ -103,7 +103,7 @@
       <div class="chat-head">
         <select id="chatSelect" aria-label="채팅 선택"></select>
       </div>
-      <div class="chat-body"><iframe id="chatFrame" src="about:blank"></iframe></div>
+      <div class="chat-body"><iframe id="chatFrame" src="about:blank" allow="local-network-access; loopback-network"></iframe></div>
     </div>
   </div>
 
@@ -125,32 +125,58 @@ const chatFrame = document.getElementById('chatFrame');
 function playerUrl(id){ return 'https://play.sooplive.com/' + id + '/direct?fromApi=1'; }
 function chatUrl(id){ return 'https://play.sooplive.com/' + id + '?vtype=chat'; }
 
-function renderGrid(){
+// 셀 4개는 최초 1회만 생성. 이후엔 renderSlot으로 해당 칸만 갱신
+// → 칸 추가/제거해도 다른 칸의 iframe(재생 중인 방송)은 그대로 유지됨.
+function buildGrid(){
   gridEl.innerHTML = '';
   for(let i = 0; i < MAX; i++){
-    const ch = channels[i];
     const cell = document.createElement('div');
-    cell.className = 'cell' + (ch ? '' : ' empty');
+    cell.className = 'cell';
+    cell.id = 'cell-' + i;
     cell.innerHTML =
       '<div class="cell-bar">' +
         '<span class="cell-num">' + (i+1) + '</span>' +
-        '<span class="cell-name">' + (ch ? (ch.name || ch.id) : '비어 있음') + '</span>' +
-        (ch ? '<button class="cell-btn cb-clear" data-clear="' + i + '">✕ 제거</button>' : '') +
+        '<span class="cell-name" id="name-' + i + '"></span>' +
+        '<button class="cell-btn cb-clear" data-clear="' + i + '" style="display:none">✕ 제거</button>' +
       '</div>' +
-      '<div class="cell-body" id="body-' + i + '">' +
-        (ch ? '' :
-          '<div class="cell-empty-msg">' +
-            '<div style="font-size:12px;color:#666;margin-bottom:2px">스트리머 아이디를 입력하거나<br>상단 [＋ 스트리머 추가]에서 선택</div>' +
-            '<div class="empty-input-row">' +
-              '<input class="empty-input" id="empty-inp-' + i + '" placeholder="아이디 또는 방송 URL" />' +
-              '<button class="empty-go" data-emptygo="' + i + '">로드</button>' +
-            '</div>' +
-          '</div>') +
-      '</div>';
+      '<div class="cell-body" id="body-' + i + '"></div>';
     gridEl.appendChild(cell);
-    if(ch) mountPlayer(i, ch.id);
+    renderSlot(i);
   }
   refreshChatOptions();
+}
+
+// 특정 칸만 갱신. 이미 같은 방송이 재생 중이면 iframe을 건드리지 않음.
+function renderSlot(slot){
+  const ch = channels[slot];
+  const cell = document.getElementById('cell-' + slot);
+  const body = document.getElementById('body-' + slot);
+  const nameEl = document.getElementById('name-' + slot);
+  const clearBtn = cell.querySelector('.cb-clear');
+  if(!cell || !body) return;
+
+  if(ch){
+    cell.classList.remove('empty');
+    nameEl.textContent = ch.name || ch.id;
+    clearBtn.style.display = '';
+    // 이미 같은 아이디의 iframe이 있으면 재로드하지 않음 (핵심)
+    const existing = body.querySelector('iframe');
+    if(!existing || existing.dataset.sid !== ch.id){
+      mountPlayer(slot, ch.id);
+    }
+  } else {
+    cell.classList.add('empty');
+    nameEl.textContent = '비어 있음';
+    clearBtn.style.display = 'none';
+    body.innerHTML =
+      '<div class="cell-empty-msg">' +
+        '<div style="font-size:12px;color:#666;margin-bottom:2px">스트리머 아이디를 입력하거나<br>상단 [＋ 스트리머 추가]에서 선택</div>' +
+        '<div class="empty-input-row">' +
+          '<input class="empty-input" id="empty-inp-' + slot + '" placeholder="아이디 또는 방송 URL" />' +
+          '<button class="empty-go" data-emptygo="' + slot + '">로드</button>' +
+        '</div>' +
+      '</div>';
+  }
 }
 
 function mountPlayer(slot, id){
@@ -175,7 +201,7 @@ window.addEventListener('message', function(e){
   } else if(data.cmd === 'PupdateBroadInfo'){
     if(data.data && data.data.nick && channels[idx]){
       channels[idx].name = data.data.nick;
-      const nameEl = gridEl.children[idx] && gridEl.children[idx].querySelector('.cell-name');
+      const nameEl = document.getElementById('name-' + idx);
       if(nameEl) nameEl.textContent = data.data.nick;
       refreshChatOptions();
     }
@@ -197,16 +223,16 @@ function setSlot(slot, rawId, name){
   if(!id) return;
   if(channels.some(function(c, i){ return c && c.id === id && i !== slot; })){ alert('이미 추가된 스트리머예요.'); return; }
   channels[slot] = { id: id, name: name || id };
-  renderGrid(); saveState();
+  renderSlot(slot); refreshChatOptions(); saveState();
 }
 function addChannel(id, name){
   const slot = channels.findIndex(function(c){ return !c; });
   if(slot < 0){ alert('2×2는 최대 4개까지예요. 하나를 제거하고 추가해주세요.'); return; }
   if(channels.some(function(c){ return c && c.id === id; })){ alert('이미 추가된 스트리머예요.'); return; }
   channels[slot] = { id: id, name: name || id };
-  renderGrid(); saveState();
+  renderSlot(slot); refreshChatOptions(); saveState();
 }
-function removeChannel(slot){ channels[slot] = null; renderGrid(); saveState(); }
+function removeChannel(slot){ channels[slot] = null; renderSlot(slot); refreshChatOptions(); saveState(); }
 gridEl.addEventListener('click', function(e){
   const cl = e.target.closest('[data-clear]');
   if(cl){ removeChannel(+cl.dataset.clear); return; }
@@ -300,7 +326,7 @@ function loadState(){
 
 async function init(){
   loadState();
-  renderGrid();
+  buildGrid();
   const res = await sb.from('streamers').select('*').order('sort_order');
   STREAMERS = res.data || [];
   renderPicker();
