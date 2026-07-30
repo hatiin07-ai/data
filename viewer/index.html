@@ -3,356 +3,268 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SOOP 멀티뷰어</title>
+<title>SOOP 멀티뷰어 (2×2)</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  :root{ --bg:#0c0c0c; --panel:#161616; --cell:#0f0f0f; --bar:#1c1c1c; --line:#2a2a2a; --accent:#3fbf6a; }
+  :root{ color-scheme:dark; --bg:#0c0c0c; --panel:#161616; --line:#2a2a2a; --accent:#3fbf6a; }
   *{ box-sizing:border-box; }
-  html,body{ margin:0; padding:0; height:100%; background:var(--bg); color:#eee; font-family:'맑은 고딕','Malgun Gothic',sans-serif; overflow:hidden; }
+  html,body{ margin:0; padding:0; width:100%; height:100%; background:var(--bg); color:#eee;
+    font-family:'맑은 고딕','Malgun Gothic',sans-serif; overflow:hidden; }
   body{ display:flex; flex-direction:column; }
 
   .toolbar{
-    height:46px; flex:none; background:var(--panel); border-bottom:1px solid var(--line);
-    display:flex; align-items:center; gap:6px; padding:0 10px; flex-wrap:wrap;
+    height:48px; flex:none; background:var(--panel); border-bottom:1px solid var(--line);
+    display:flex; align-items:center; gap:8px; padding:0 12px;
   }
-  .toolbar button, .toolbar select{
-    height:30px; border:none; border-radius:7px; color:#fff; cursor:pointer;
-    font-size:12.5px; font-family:inherit; padding:0 12px;
+  .toolbar .title{ font-weight:700; font-size:14px; color:#ddd; }
+  .toolbar .title small{ color:#888; font-weight:400; margin-left:6px; }
+  .toolbar button{
+    height:32px; border:none; border-radius:7px; color:#fff; cursor:pointer;
+    font-size:12.5px; font-family:inherit; padding:0 13px;
   }
-  .btn-grid{ background:#3a3a3a; }
-  .btn-grid.active{ background:#5a4a9a; }
-  .btn-act{ background:#2a2a2a; }
-  .btn-load{ background:#1e6446; }
-  .btn-clear{ background:#7a2323; }
-  .toolbar select{ background:#2a2a2a; }
+  .btn-add{ background:#1e6446; }
+  .btn-chat{ background:#3a3a3a; }
+  .btn-chat.off{ background:#2a2a2a; color:#888; }
   .spacer{ flex:1; }
-  .status{ font-size:11.5px; color:#888; padding:0 6px; }
+
+  .main{ flex:1; display:flex; min-height:0; }
 
   .grid{
-    flex:1; display:grid; gap:4px; padding:4px; min-height:0;
+    flex:1; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr;
+    gap:3px; padding:3px; min-width:0; min-height:0;
   }
   .cell{
-    background:var(--cell); border:1px solid var(--line); border-radius:6px;
-    display:flex; flex-direction:column; min-height:0; overflow:hidden; position:relative;
+    background:#000; border:1px solid var(--line); border-radius:6px;
+    display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; position:relative;
   }
   .cell-bar{
-    height:30px; flex:none; background:var(--bar); display:flex; align-items:center; gap:4px; padding:0 5px;
+    height:28px; flex:none; background:#1c1c1c; display:flex; align-items:center; gap:4px; padding:0 5px;
+    opacity:0; transition:opacity .15s; position:absolute; top:0; left:0; right:0; z-index:5;
   }
-  .cell-num{ font-size:10px; font-weight:700; color:#50a0ff; min-width:20px; text-align:center; }
-  .cell-input{
-    flex:1; min-width:0; height:22px; background:#282828; border:none; border-radius:4px;
-    color:#fff; font-size:11px; font-family:inherit; padding:0 7px;
-  }
-  .cell-input::placeholder{ color:#777; }
-  .cell-btn{
-    height:22px; border:none; border-radius:4px; color:#fff; cursor:pointer; font-size:11px;
-    padding:0 7px; flex:none;
-  }
-  .cb-go{ background:#0064be; }
-  .cb-focus{ background:#46327f; }
+  .cell:hover .cell-bar{ opacity:1; }
+  .cell.empty .cell-bar{ opacity:1; position:static; }
+  .cell-num{ font-size:10px; font-weight:700; color:#50a0ff; min-width:18px; text-align:center; }
+  .cell-name{ flex:1; min-width:0; font-size:11.5px; color:#ddd; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cell-btn{ height:20px; border:none; border-radius:4px; color:#fff; cursor:pointer; font-size:10.5px; padding:0 6px; flex:none; }
   .cb-clear{ background:#5a2020; }
   .cell-body{ flex:1; min-height:0; position:relative; background:#000; }
   .cell-body iframe{ width:100%; height:100%; border:0; display:block; }
-  .cell-empty{
-    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    color:#555; font-size:12px; pointer-events:none;
+  .cell-empty-msg{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    color:#555; font-size:13px; gap:10px; pointer-events:none;
   }
 
-  /* 포커스 확대 */
-  .focus-overlay{
-    position:fixed; inset:0; background:rgba(10,10,10,.92); z-index:50;
-    display:flex; flex-direction:column; padding:8px;
-  }
-  .focus-top{ height:34px; flex:none; display:flex; align-items:center; gap:10px; padding:0 8px; }
-  .focus-title{ flex:1; font-size:13px; color:#bbb; }
-  .focus-close{ height:28px; padding:0 14px; border:none; border-radius:6px; background:#c42b1c; color:#fff; cursor:pointer; font-family:inherit; }
-  .focus-body{ flex:1; min-height:0; background:#000; border-radius:6px; overflow:hidden; }
-  .focus-body iframe{ width:100%; height:100%; border:0; }
+  .chat-panel{ width:340px; flex:none; display:flex; flex-direction:column; background:#0a0a0a; border-left:1px solid var(--line); }
+  .chat-panel.hidden{ display:none; }
+  .chat-head{ height:34px; flex:none; display:flex; align-items:center; gap:6px; padding:0 8px; background:#161616; }
+  .chat-head select{ flex:1; height:24px; background:#2a2a2a; color:#fff; border:1px solid var(--line); border-radius:5px; font-family:inherit; font-size:12px; }
+  .chat-body{ flex:1; min-height:0; }
+  .chat-body iframe{ width:100%; height:100%; border:0; }
 
-  /* 스트리머 선택 드롭다운 */
   .picker{ position:relative; }
   .picker-menu{
-    position:absolute; top:34px; left:0; background:var(--panel); border:1px solid var(--line);
+    position:absolute; top:36px; left:0; background:var(--panel); border:1px solid var(--line);
     border-radius:8px; padding:6px; display:none; grid-template-columns:repeat(2,1fr); gap:4px;
-    z-index:20; min-width:240px; max-height:320px; overflow:auto;
+    z-index:30; min-width:280px; max-height:60vh; overflow:auto;
   }
   .picker-menu.open{ display:grid; }
-  .picker-item{
-    display:flex; align-items:center; gap:7px; padding:6px 8px; border-radius:6px; cursor:pointer;
-    font-size:12px; background:#222;
-  }
+  .picker-item{ display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:6px; cursor:pointer; font-size:12.5px; background:#222; }
   .picker-item:hover{ background:#333; }
-  .picker-item img{ width:22px; height:22px; border-radius:50%; flex:none; object-fit:cover; background:#444; }
+  .picker-item.disabled{ opacity:.4; cursor:not-allowed; }
+  .picker-item img{ width:24px; height:24px; border-radius:50%; flex:none; object-fit:cover; background:#444; }
   .picker-item .live{ width:6px; height:6px; border-radius:50%; background:#555; flex:none; }
   .picker-item .live.on{ background:var(--accent); box-shadow:0 0 5px var(--accent); }
+  .picker-head{ grid-column:1/-1; font-size:11px; color:#888; padding:2px 4px; }
 </style>
 </head>
 <body>
 
   <div class="toolbar">
-    <button class="btn-grid" data-cols="2" data-rows="2">2×2</button>
-    <button class="btn-grid active" data-cols="3" data-rows="3">3×3</button>
-    <button class="btn-grid" data-cols="4" data-rows="2">4×2</button>
-    <button class="btn-grid" data-cols="1" data-rows="1">1×1</button>
-    <span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span>
+    <span class="title">SOOP 멀티뷰어 <small>2×2 · 최대 4방송</small></span>
     <div class="picker">
-      <button class="btn-load" id="pickBtn">＋ 스트리머 채우기</button>
+      <button class="btn-add" id="pickBtn">＋ 스트리머 추가</button>
       <div class="picker-menu" id="pickMenu"></div>
     </div>
-    <button class="btn-act" id="reloadBtn">🔄 전체 새로고침</button>
-    <button class="btn-clear" id="clearBtn">🗑 초기화</button>
+    <button class="btn-chat" id="chatBtn">💬 채팅</button>
     <span class="spacer"></span>
-    <span class="status" id="status">준비 중…</span>
+    <span id="status" style="font-size:11.5px;color:#888"></span>
   </div>
 
-  <div class="grid" id="grid"></div>
+  <div class="main">
+    <div class="grid" id="grid"></div>
+    <div class="chat-panel hidden" id="chatPanel">
+      <div class="chat-head">
+        <select id="chatSelect" aria-label="채팅 선택"></select>
+      </div>
+      <div class="chat-body"><iframe id="chatFrame" src="about:blank"></iframe></div>
+    </div>
+  </div>
 
 <script>
 const SUPABASE_URL = 'https://fwlkyyvrkunqqtyttilp.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3bGt5eXZya3VucXF0eXR0aWxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2MTIyODcsImV4cCI6MjEwMDE4ODI4N30.bFTQVch4TYCxXAWvtTcWdLA4B4HeyAeepqLjZ2daJWI';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const MAX = 9;
-let cols = 3, rows = 3;
-let channels = new Array(MAX).fill(null); // 각 칸의 bjId
+const MAX = 4;
+let channels = new Array(MAX).fill(null);
 let STREAMERS = [];
 
 const gridEl = document.getElementById('grid');
 const statusEl = document.getElementById('status');
+const chatPanel = document.getElementById('chatPanel');
+const chatSelect = document.getElementById('chatSelect');
+const chatFrame = document.getElementById('chatFrame');
 
-function total(){ return cols * rows; }
+function playerUrl(id){ return 'https://play.sooplive.com/' + id + '/direct?fromApi=1'; }
+function chatUrl(id){ return 'https://play.sooplive.com/' + id + '?vtype=chat'; }
 
-// ── SOOP direct 플레이어 URL 생성 ──────────────────────────
-// 순수 play.sooplive.com/{id}/direct 가 잘 뜨므로 그대로 사용.
-// F안 테스트: 세션 구분용으로 fromApi만 칸마다 다르게 부여(잉여 파라미터는 붙이지 않음).
-function playerUrl(bjId, slot){
-  const fromApi = 1000 + slot; // 칸마다 다른 값
-  return `https://play.sooplive.com/${bjId}/direct?fromApi=${fromApi}`;
-}
-
-// ── 그리드 렌더 ────────────────────────────────────────────
 function renderGrid(){
-  gridEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-  gridEl.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
-  const n = total();
   gridEl.innerHTML = '';
-  for(let i = 0; i < n; i++){
+  for(let i = 0; i < MAX; i++){
+    const ch = channels[i];
     const cell = document.createElement('div');
-    cell.className = 'cell';
-    cell.innerHTML = `
-      <div class="cell-bar">
-        <span class="cell-num">${String(i+1).padStart(2,'0')}</span>
-        <input class="cell-input" id="inp-${i}" placeholder="아이디 또는 URL" value="${channels[i] || ''}" />
-        <button class="cell-btn cb-go" data-go="${i}">▶</button>
-        <button class="cell-btn cb-focus" data-focus="${i}">⛶</button>
-        <button class="cell-btn cb-clear" data-clear="${i}">✕</button>
-      </div>
-      <div class="cell-body" id="body-${i}">
-        ${channels[i] ? '' : '<div class="cell-empty">비어 있음</div>'}
-      </div>`;
+    cell.className = 'cell' + (ch ? '' : ' empty');
+    cell.innerHTML =
+      '<div class="cell-bar">' +
+        '<span class="cell-num">' + (i+1) + '</span>' +
+        '<span class="cell-name">' + (ch ? (ch.name || ch.id) : '비어 있음') + '</span>' +
+        (ch ? '<button class="cell-btn cb-clear" data-clear="' + i + '">✕ 제거</button>' : '') +
+      '</div>' +
+      '<div class="cell-body" id="body-' + i + '">' +
+        (ch ? '' : '<div class="cell-empty-msg">＋ 스트리머 추가<br><small style="color:#444">상단 버튼에서 선택</small></div>') +
+      '</div>';
     gridEl.appendChild(cell);
-    if(channels[i]) mountPlayer(i, channels[i]);
+    if(ch) mountPlayer(i, ch.id);
   }
+  refreshChatOptions();
 }
 
-function mountPlayer(slot, bjId){
+function mountPlayer(slot, id){
   const body = document.getElementById('body-'+slot);
   if(!body) return;
-  const fromApi = String(1000 + slot);
-  body.innerHTML = `<iframe id="ifr-${slot}" src="${playerUrl(bjId, slot)}"
-    allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe>`;
-  // WinForms 버전과 동일: play.sooplive.com이 PonReady를 보내면 Pload로 응답해 재생 시작.
-  // 각 칸마다 다른 fromApi를 실어 세션 구분 시도(F안).
-  const ifr = document.getElementById('ifr-'+slot);
-  ifr.dataset.bjId = bjId;
-  ifr.dataset.fromApi = fromApi;
+  body.innerHTML = '<iframe id="ifr-' + slot + '" data-sid="' + id + '" src="' + playerUrl(id) + '" ' +
+    'frameborder="0" scrolling="no" allowfullscreen allow="autoplay; fullscreen; encrypted-media"></iframe>';
 }
 
-// play.sooplive.com에서 오는 PonReady 수신 → 해당 iframe에 Pload 전송
-window.addEventListener('message', (e) => {
-  if(!/sooplive\.com$/.test(new URL(e.origin).hostname)) return;
-  const data = e.data;
-  if(!data || data.cmd !== 'PonReady') return;
-  // 어느 iframe에서 온 메시지인지 찾아서 그 칸의 bjId로 Pload
-  const iframes = document.querySelectorAll('.cell-body iframe, .focus-body iframe');
-  for(const ifr of iframes){
-    if(ifr.contentWindow === e.source){
-      ifr.contentWindow.postMessage({
-        cmd: 'Pload',
-        id: ifr.dataset.bjId,
-        mutePlay: false,
-        showChat: false,
-        autoPlay: true,
-        isAdShow: true,
-        showQualityBox: true,
-        fromApi: ifr.dataset.fromApi || '1'
-      }, 'https://play.sooplive.com');
-      break;
+window.addEventListener('message', function(e){
+  if(e.origin !== 'https://play.sooplive.com') return;
+  const iframes = document.querySelectorAll('.cell-body iframe');
+  const idx = Array.prototype.findIndex.call(iframes, function(f){ return e.source === f.contentWindow; });
+  if(idx < 0) return;
+  const data = e.data || {};
+  if(data.cmd === 'PonReady'){
+    e.source.postMessage({
+      cmd: 'Pload', id: iframes[idx].dataset.sid,
+      mutePlay: false, showChat: false, autoPlay: true,
+      isAdShow: true, showQualityBox: true, fromApi: '1'
+    }, 'https://play.sooplive.com');
+  } else if(data.cmd === 'PupdateBroadInfo'){
+    if(data.data && data.data.nick && channels[idx]){
+      channels[idx].name = data.data.nick;
+      const nameEl = gridEl.children[idx] && gridEl.children[idx].querySelector('.cell-name');
+      if(nameEl) nameEl.textContent = data.data.nick;
+      refreshChatOptions();
     }
   }
 });
 
-function extractBjId(raw){
-  raw = (raw || '').trim();
-  if(!raw) return '';
-  if(!/^https?:\/\//i.test(raw) && !raw.includes('/')) return raw; // 아이디만 입력
-  try{
-    const u = new URL(raw.startsWith('http') ? raw : 'https://' + raw);
-    const parts = u.pathname.split('/').filter(Boolean);
-    return parts[0] || '';
-  }catch{ return raw; }
+function addChannel(id, name){
+  const slot = channels.findIndex(function(c){ return !c; });
+  if(slot < 0){ alert('2×2는 최대 4개까지예요. 하나를 제거하고 추가해주세요.'); return; }
+  if(channels.some(function(c){ return c && c.id === id; })){ alert('이미 추가된 스트리머예요.'); return; }
+  channels[slot] = { id: id, name: name || id };
+  renderGrid(); saveState();
 }
-
-function setChannel(slot, raw){
-  const bjId = extractBjId(raw);
-  channels[slot] = bjId || null;
-  const inp = document.getElementById('inp-'+slot);
-  if(inp) inp.value = bjId;
-  const body = document.getElementById('body-'+slot);
-  if(!body) return;
-  if(bjId){ mountPlayer(slot, bjId); }
-  else { body.innerHTML = '<div class="cell-empty">비어 있음</div>'; }
-  saveState();
-}
-
-// ── 이벤트 위임 ────────────────────────────────────────────
-gridEl.addEventListener('click', (e) => {
-  const go = e.target.closest('[data-go]');
-  const fo = e.target.closest('[data-focus]');
+function removeChannel(slot){ channels[slot] = null; renderGrid(); saveState(); }
+gridEl.addEventListener('click', function(e){
   const cl = e.target.closest('[data-clear]');
-  if(go){ const i = +go.dataset.go; setChannel(i, document.getElementById('inp-'+i).value); }
-  if(fo){ const i = +fo.dataset.focus; if(channels[i]) openFocus(i); }
-  if(cl){ const i = +cl.dataset.clear; setChannel(i, ''); }
+  if(cl) removeChannel(+cl.dataset.clear);
 });
-gridEl.addEventListener('keydown', (e) => {
-  if(e.key === 'Enter' && e.target.classList.contains('cell-input')){
-    const i = +e.target.id.split('-')[1];
-    setChannel(i, e.target.value);
+
+function refreshChatOptions(){
+  const active = channels.filter(Boolean);
+  const cur = chatSelect.value;
+  chatSelect.innerHTML = active.map(function(c){
+    return '<option value="' + c.id + '">' + (c.name || c.id) + '</option>';
+  }).join('') + '<option value="about:blank">(채팅 숨기기)</option>';
+  if([].slice.call(chatSelect.options).some(function(o){ return o.value === cur; })) chatSelect.value = cur;
+  syncChat();
+}
+function syncChat(){
+  if(chatPanel.classList.contains('hidden')) return;
+  const v = chatSelect.value;
+  const target = v === 'about:blank' ? 'about:blank' : chatUrl(v);
+  if(chatFrame.src !== target) chatFrame.src = target;
+}
+chatSelect.addEventListener('change', syncChat);
+document.getElementById('chatBtn').addEventListener('click', function(){
+  const btn = document.getElementById('chatBtn');
+  chatPanel.classList.toggle('hidden');
+  btn.classList.toggle('off', chatPanel.classList.contains('hidden'));
+  if(!chatPanel.classList.contains('hidden')){
+    if(!chatSelect.value || chatSelect.value === 'about:blank'){
+      const first = channels.find(Boolean);
+      if(first) chatSelect.value = first.id;
+    }
+    syncChat();
   }
 });
 
-// ── 그리드 크기 전환 ───────────────────────────────────────
-document.querySelectorAll('.btn-grid').forEach(b => {
-  b.addEventListener('click', () => {
-    document.querySelectorAll('.btn-grid').forEach(x => x.classList.remove('active'));
-    b.classList.add('active');
-    cols = +b.dataset.cols; rows = +b.dataset.rows;
-    renderGrid();
-    saveState();
-  });
-});
-
-// ── 포커스 확대 ────────────────────────────────────────────
-function openFocus(slot){
-  const ov = document.createElement('div');
-  ov.className = 'focus-overlay';
-  ov.innerHTML = `
-    <div class="focus-top">
-      <span class="focus-title">CH ${String(slot+1).padStart(2,'0')} — ${channels[slot]}</span>
-      <button class="focus-close">✕ 닫기 (ESC)</button>
-    </div>
-    <div class="focus-body">
-      <iframe id="focus-ifr" data-bj-id="${channels[slot]}" data-from-api="${1000+slot}"
-        src="${playerUrl(channels[slot], slot)}" allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe>
-    </div>`;
-  document.body.appendChild(ov);
-  const close = () => ov.remove();
-  ov.querySelector('.focus-close').addEventListener('click', close);
-  ov.addEventListener('click', (e) => { if(e.target === ov) close(); });
-  document.addEventListener('keydown', function esc(e){
-    if(e.key === 'Escape'){ close(); document.removeEventListener('keydown', esc); }
-  });
-}
-
-// ── 전체 새로고침 / 초기화 ─────────────────────────────────
-document.getElementById('reloadBtn').addEventListener('click', () => {
-  for(let i = 0; i < total(); i++) if(channels[i]) mountPlayer(i, channels[i]);
-});
-document.getElementById('clearBtn').addEventListener('click', () => {
-  if(!confirm('모든 채널을 비울까요?')) return;
-  channels = new Array(MAX).fill(null);
-  renderGrid(); saveState();
-});
-
-// ── 스트리머 채우기 드롭다운 ───────────────────────────────
 const pickBtn = document.getElementById('pickBtn');
 const pickMenu = document.getElementById('pickMenu');
-pickBtn.addEventListener('click', (e) => { e.stopPropagation(); pickMenu.classList.toggle('open'); });
-document.addEventListener('click', (e) => { if(!e.target.closest('.picker')) pickMenu.classList.remove('open'); });
+pickBtn.addEventListener('click', function(e){ e.stopPropagation(); pickMenu.classList.toggle('open'); });
+document.addEventListener('click', function(e){ if(!e.target.closest('.picker')) pickMenu.classList.remove('open'); });
 
 function renderPicker(){
-  pickMenu.innerHTML = `
-    <div class="picker-item" data-fill-all style="grid-column:1/-1; justify-content:center; background:#1e6446;">▼ 전체 순서대로 채우기</div>
-  ` + STREAMERS.filter(s => s.soop_id).map(s => `
-    <div class="picker-item" data-sid="${s.soop_id}">
-      <span class="live" id="pk-live-${s.soop_id}"></span>
-      <img src="https://profile.img.sooplive.com/LOGO/${s.soop_id.slice(0,2)}/${s.soop_id}/${s.soop_id}.jpg"
-        onerror="this.style.visibility='hidden'" />
-      <span>${s.name}</span>
-    </div>
-  `).join('');
+  const usable = STREAMERS.filter(function(s){ return s.soop_id; });
+  pickMenu.innerHTML = '<div class="picker-head">추가할 스트리머 선택 (최대 4)</div>' +
+    usable.map(function(s){
+      const already = channels.some(function(c){ return c && c.id === s.soop_id; });
+      return '<div class="picker-item' + (already ? ' disabled' : '') + '" data-sid="' + s.soop_id + '" data-name="' + (s.name||'').replace(/"/g,'') + '">' +
+        '<span class="live" id="pk-live-' + s.soop_id + '"></span>' +
+        '<img src="https://profile.img.sooplive.com/LOGO/' + s.soop_id.slice(0,2) + '/' + s.soop_id + '/' + s.soop_id + '.jpg" onerror="this.style.visibility=\'hidden\'" />' +
+        '<span>' + s.name + (already ? ' ✓' : '') + '</span>' +
+      '</div>';
+    }).join('');
 }
-pickMenu.addEventListener('click', (e) => {
-  const all = e.target.closest('[data-fill-all]');
-  const one = e.target.closest('[data-sid]');
-  if(all){
-    const ids = STREAMERS.filter(s => s.soop_id).map(s => s.soop_id);
-    channels = new Array(MAX).fill(null);
-    for(let i = 0; i < Math.min(ids.length, total()); i++) channels[i] = ids[i];
-    renderGrid(); saveState(); pickMenu.classList.remove('open');
-  }
-  if(one){
-    const sid = one.dataset.sid;
-    const empty = channels.slice(0, total()).findIndex(c => !c);
-    const slot = empty >= 0 ? empty : 0;
-    setChannel(slot, sid);
-    pickMenu.classList.remove('open');
-  }
+pickMenu.addEventListener('click', function(e){
+  const item = e.target.closest('[data-sid]');
+  if(!item || item.classList.contains('disabled')) return;
+  addChannel(item.dataset.sid, item.dataset.name);
+  renderPicker();
+  if(channels.every(Boolean)) pickMenu.classList.remove('open');
 });
 
-// ── 온에어 상태 표시 (드롭다운 점) ─────────────────────────
 function refreshLive(){
-  STREAMERS.filter(s => s.soop_id).forEach(s => {
-    fetch(`/api/soop-status?id=${encodeURIComponent(s.soop_id)}`)
-      .then(r => r.json())
-      .then(d => {
-        const dot = document.getElementById('pk-live-'+s.soop_id);
-        if(dot && d.isLive) dot.classList.add('on');
-      }).catch(()=>{});
+  STREAMERS.filter(function(s){ return s.soop_id; }).forEach(function(s){
+    fetch('/api/soop-status?id=' + encodeURIComponent(s.soop_id))
+      .then(function(r){ return r.json(); })
+      .then(function(d){ const dot = document.getElementById('pk-live-'+s.soop_id); if(dot && d.isLive) dot.classList.add('on'); })
+      .catch(function(){});
   });
 }
 
-// ── 상태 저장/복원 (localStorage) ──────────────────────────
-function saveState(){
-  try{
-    localStorage.setItem('soop_mv', JSON.stringify({ cols, rows, channels }));
-  }catch{}
-}
+function saveState(){ try{ localStorage.setItem('soop_mv2', JSON.stringify({ channels: channels })); }catch(e){} }
 function loadState(){
   try{
-    const raw = localStorage.getItem('soop_mv');
-    if(!raw) return;
-    const st = JSON.parse(raw);
-    cols = st.cols || 3; rows = st.rows || 3;
-    channels = (st.channels || []).slice(0, MAX);
-    while(channels.length < MAX) channels.push(null);
-    document.querySelectorAll('.btn-grid').forEach(b => {
-      b.classList.toggle('active', +b.dataset.cols === cols && +b.dataset.rows === rows);
-    });
-  }catch{}
+    const st = JSON.parse(localStorage.getItem('soop_mv2') || '{}');
+    if(Array.isArray(st.channels)){
+      channels = st.channels.slice(0, MAX);
+      while(channels.length < MAX) channels.push(null);
+    }
+  }catch(e){}
 }
 
-// ── 초기화 ─────────────────────────────────────────────────
 async function init(){
   loadState();
   renderGrid();
-  const { data } = await sb.from('streamers').select('*').order('sort_order');
-  STREAMERS = data || [];
+  const res = await sb.from('streamers').select('*').order('sort_order');
+  STREAMERS = res.data || [];
   renderPicker();
   refreshLive();
-  statusEl.textContent = `스트리머 ${STREAMERS.filter(s=>s.soop_id).length}명 · 각 칸 fromApi 분리 테스트`;
+  statusEl.textContent = '등록 스트리머 ' + STREAMERS.filter(function(s){ return s.soop_id; }).length + '명';
 }
-init().catch(err => { statusEl.textContent = '로드 실패'; console.error(err); });
+init().catch(function(err){ statusEl.textContent = '로드 실패'; console.error(err); });
 </script>
 </body>
 </html>
