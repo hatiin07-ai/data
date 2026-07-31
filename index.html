@@ -94,6 +94,8 @@
   .tab-viewer:hover{ background:#ffe9dc; }
   .tab-coord{ color:#2563eb; border-color:#bcd0f5; background:#eff5ff; }
   .tab-coord:hover{ background:#e0ebff; }
+  .coord-live-badge.off{ background:#b5ada3 !important; }
+  #coordList a.is-live{ border-color:#f3b0ac; background:#fff8f7; }
 
   .panel{ display:none; }
   .panel.active{ display:block; }
@@ -618,6 +620,35 @@ tabLinks.forEach(btn => {
     });
     renderList(list);
     renderCooldown();
+    fetchLiveInfo(list); // 온에어 상태 + 방송 제목 비동기로 채우기
+  }
+
+  // 각 추천 방송의 온에어/제목을 API로 받아 카드에 반영
+  function fetchLiveInfo(list){
+    list.forEach(function(item){
+      fetch('/api/soop-status?id=' + encodeURIComponent(item.soop_id))
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          const card = document.getElementById('coord-card-' + item.soop_id);
+          if(!card) return;
+          const badge = card.querySelector('.coord-live-badge');
+          const titleEl = card.querySelector('.coord-title');
+          if(d.isLive){
+            if(badge){ badge.textContent = 'ON AIR'; badge.style.display = ''; }
+            if(titleEl){
+              var t = d.title || '';
+              if(d.viewers) t += (t ? '  ·  ' : '') + '👁 ' + Number(d.viewers).toLocaleString();
+              titleEl.textContent = t;
+              titleEl.style.display = t ? '' : 'none';
+            }
+            card.classList.add('is-live');
+          } else {
+            if(badge){ badge.textContent = 'OFF'; badge.style.display = ''; badge.classList.add('off'); }
+            if(titleEl){ titleEl.textContent = '방송 종료'; titleEl.style.color = '#b5ada3'; }
+          }
+        })
+        .catch(function(){});
+    });
   }
 
   function renderList(list){
@@ -627,12 +658,16 @@ tabLinks.forEach(btn => {
     }
     listEl.innerHTML = list.map(function(item){
       const img = 'https://profile.img.sooplive.com/LOGO/' + item.soop_id.slice(0,2) + '/' + item.soop_id + '/' + item.soop_id + '.jpg';
-      return '<a href="https://play.sooplive.com/' + item.soop_id + '/" target="_blank" rel="noopener" ' +
+      return '<a href="https://play.sooplive.com/' + item.soop_id + '/" target="_blank" rel="noopener" id="coord-card-' + item.soop_id + '" ' +
         'style="display:flex;align-items:center;gap:11px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;text-decoration:none;background:var(--card)">' +
           '<img src="' + img + '" onerror="this.style.visibility=\'hidden\'" style="width:40px;height:40px;border-radius:50%;flex:none;object-fit:cover;background:#eee" />' +
           '<div style="flex:1;min-width:0">' +
-            '<div style="font-weight:700;font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + '</div>' +
-            '<div style="font-size:11.5px;color:#a09890">@' + item.soop_id + '</div>' +
+            '<div style="display:flex;align-items:center;gap:6px">' +
+              '<span class="coord-live-badge" style="display:none;flex:none;font-size:10px;font-weight:700;color:#fff;background:#e0322a;border-radius:5px;padding:1px 6px">ON AIR</span>' +
+              '<span style="font-weight:700;font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + '</span>' +
+            '</div>' +
+            '<div class="coord-title" style="display:none;font-size:11.5px;color:#6b6259;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px"></div>' +
+            '<div style="font-size:11px;color:#a09890">@' + item.soop_id + '</div>' +
           '</div>' +
           '<span style="flex:none;background:#eff5ff;color:#2563eb;font-weight:700;font-size:13px;border-radius:20px;padding:5px 12px">👍 ' + item.count + '</span>' +
         '</a>';
