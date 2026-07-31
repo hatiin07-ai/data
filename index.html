@@ -637,6 +637,9 @@ tabLinks.forEach(btn => {
           if(!card) return;
           const badge = card.querySelector('.coord-live-badge');
           const titleEl = card.querySelector('.coord-title');
+          const nameEl = card.querySelector('.coord-name');
+          // 방송 정보의 닉네임으로 이름 갱신 (아이디 대신 실제 닉네임 표시)
+          if(d.nick && nameEl) nameEl.textContent = d.nick;
           if(d.isLive){
             if(badge){ badge.textContent = 'ON AIR'; badge.style.display = ''; }
             if(titleEl){
@@ -676,7 +679,7 @@ tabLinks.forEach(btn => {
             '<div style="flex:1;min-width:0">' +
               '<div style="display:flex;align-items:center;gap:6px">' +
                 '<span class="coord-live-badge" style="display:none;flex:none;font-size:10px;font-weight:700;color:#fff;background:#e0322a;border-radius:5px;padding:1px 6px">ON AIR</span>' +
-                '<span style="font-weight:700;font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + '</span>' +
+                '<span class="coord-name" style="font-weight:700;font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + '</span>' +
               '</div>' +
               '<div class="coord-title" style="display:none;font-size:11.5px;color:#6b6259;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px"></div>' +
               '<div style="font-size:11px;color:#a09890">@' + item.soop_id + '</div>' +

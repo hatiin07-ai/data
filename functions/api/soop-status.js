@@ -32,6 +32,7 @@ export async function onRequestGet({ request }) {
 
     return new Response(JSON.stringify({
       isLive: !!found,
+      nick: found?.user_nick || null,
       title: found?.broad_title || null,
       viewers: found?.total_view_cnt || null,
       startedAt: found?.broad_start || null,
