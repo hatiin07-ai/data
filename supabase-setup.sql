@@ -141,3 +141,24 @@ on conflict (key) do nothing;
 
 -- 9) 이름 그라데이션 끝색 (시작색 = 기존 color, 끝색 = color2)
 alter table public.streamers add column if not exists color2 text;
+
+-- 10) 좌표 추천 (라이브 방송 추천, 1시간 만료, 방문자별 1시간 1회)
+create table if not exists public.live_recommends (
+  id uuid primary key default gen_random_uuid(),
+  soop_id text not null,
+  display_name text,          -- 표시용 이름 (등록 스트리머면 이름, 아니면 아이디)
+  voter_id text not null,     -- 방문자 식별(localStorage UUID)
+  created_at timestamptz not null default now()
+);
+alter table public.live_recommends enable row level security;
+drop policy if exists "public read live_recommends" on public.live_recommends;
+drop policy if exists "public insert live_recommends" on public.live_recommends;
+drop policy if exists "public delete live_recommends" on public.live_recommends;
+create policy "public read live_recommends" on public.live_recommends for select using (true);
+create policy "public insert live_recommends" on public.live_recommends for insert with check (true);
+-- 만료분 정리를 위해 공개 삭제 허용 (1시간 지난 것만 클라이언트에서 삭제)
+create policy "public delete live_recommends" on public.live_recommends for delete using (true);
+
+-- 조회 성능용 인덱스
+create index if not exists idx_live_recommends_created on public.live_recommends (created_at);
+create index if not exists idx_live_recommends_soop on public.live_recommends (soop_id);
