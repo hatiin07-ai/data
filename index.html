@@ -216,7 +216,7 @@
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
         <span style="font-family:'A2z',sans-serif;font-weight:800;font-size:18px;color:#2c2622">📍 좌표 추천</span>
       </div>
-      <div style="font-size:12.5px;color:#8a8178;margin-bottom:16px;line-height:1.5">지금 볼만한 라이브 방송을 추천해주세요. 추천은 1시간 뒤 사라지고, 한 사람당 1시간에 한 번 추천할 수 있어요.</div>
+      <div style="font-size:12.5px;color:#8a8178;margin-bottom:16px;line-height:1.5">지금 볼만한 라이브 방송을 추천해주세요. 방송마다 👍업/👎다운 한 번씩 평가할 수 있어요. 추천은 1시간 뒤 사라져요.</div>
 
       <!-- 추천 입력 -->
       <div style="display:flex;gap:6px;margin-bottom:8px">
@@ -583,10 +583,14 @@ tabLinks.forEach(btn => {
     }
     return v;
   }
-  // 마지막 추천 시각
-  function lastVoteAt(){ return parseInt(localStorage.getItem('coord_last_vote') || '0', 10); }
-  function canVote(){ return Date.now() - lastVoteAt() >= HOUR; }
-  function markVoted(){ localStorage.setItem('coord_last_vote', String(Date.now())); }
+  // 내가 각 방송에 어떤 투표를 했는지 캐시 (soop_id -> 1 | -1)
+  function myVotes(){
+    try{ return JSON.parse(localStorage.getItem('coord_myvotes') || '{}'); }catch(e){ return {}; }
+  }
+  function setMyVote(soopId, v){
+    const m = myVotes(); m[soopId] = v;
+    localStorage.setItem('coord_myvotes', JSON.stringify(m));
+  }
 
   function extractId(raw){
     raw = (raw || '').trim();
@@ -606,20 +610,20 @@ tabLinks.forEach(btn => {
     sb.from('live_recommends').delete().lt('created_at', cutoff).then(function(){}, function(){});
     const res = await sb.from('live_recommends').select('*').gte('created_at', cutoff);
     const rows = res.data || [];
-    // soop_id별 집계
+    const mine = myVotes();
+    // soop_id별 점수 집계 (vote 합계)
     const map = {};
     rows.forEach(function(r){
-      if(!map[r.soop_id]) map[r.soop_id] = { soop_id: r.soop_id, name: r.display_name || r.soop_id, count: 0, latest: r.created_at };
-      map[r.soop_id].count++;
+      if(!map[r.soop_id]) map[r.soop_id] = { soop_id: r.soop_id, name: r.display_name || r.soop_id, score: 0, latest: r.created_at };
+      map[r.soop_id].score += (r.vote || 0);
       if(r.created_at > map[r.soop_id].latest) map[r.soop_id].latest = r.created_at;
       if(r.display_name) map[r.soop_id].name = r.display_name;
     });
     const list = Object.values(map).sort(function(a,b){
-      if(b.count !== a.count) return b.count - a.count; // 추천 많은 순
+      if(b.score !== a.score) return b.score - a.score; // 점수 높은 순
       return b.latest.localeCompare(a.latest);           // 동률이면 최신순
     });
-    renderList(list);
-    renderCooldown();
+    renderList(list, mine);
     fetchLiveInfo(list); // 온에어 상태 + 방송 제목 비동기로 채우기
   }
 
@@ -651,53 +655,78 @@ tabLinks.forEach(btn => {
     });
   }
 
-  function renderList(list){
+  function renderList(list, mine){
+    mine = mine || {};
     if(!list.length){
       listEl.innerHTML = '<div style="text-align:center;color:#b5ada3;font-size:13px;padding:20px 0">추천된 라이브 방송이 없습니다.</div>';
       return;
     }
     listEl.innerHTML = list.map(function(item){
       const img = 'https://profile.img.sooplive.com/LOGO/' + item.soop_id.slice(0,2) + '/' + item.soop_id + '/' + item.soop_id + '.jpg';
-      return '<a href="https://play.sooplive.com/' + item.soop_id + '/" target="_blank" rel="noopener" id="coord-card-' + item.soop_id + '" ' +
-        'style="display:flex;align-items:center;gap:11px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;text-decoration:none;background:var(--card)">' +
-          '<img src="' + img + '" onerror="this.style.visibility=\'hidden\'" style="width:40px;height:40px;border-radius:50%;flex:none;object-fit:cover;background:#eee" />' +
-          '<div style="flex:1;min-width:0">' +
-            '<div style="display:flex;align-items:center;gap:6px">' +
-              '<span class="coord-live-badge" style="display:none;flex:none;font-size:10px;font-weight:700;color:#fff;background:#e0322a;border-radius:5px;padding:1px 6px">ON AIR</span>' +
-              '<span style="font-weight:700;font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + '</span>' +
+      const voted = mine[item.soop_id]; // 1 | -1 | undefined
+      const upDisabled = voted === -1 ? 'disabled' : '';   // 다운 눌렀으면 업 못 누름
+      const downDisabled = voted === 1 ? 'disabled' : '';  // 업 눌렀으면 다운 못 누름
+      const upOpacity = (voted === -1) ? '0.25' : (voted === 1 ? '1' : '0.7');
+      const downOpacity = (voted === 1) ? '0.25' : (voted === -1 ? '1' : '0.7');
+      const scoreColor = item.score > 0 ? '#2563eb' : (item.score < 0 ? '#c0392b' : '#8a8178');
+      return '<div id="coord-card-' + item.soop_id + '" class="coord-card" ' +
+        'style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card)">' +
+          '<a href="https://play.sooplive.com/' + item.soop_id + '/" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none">' +
+            '<img src="' + img + '" onerror="this.style.visibility=\'hidden\'" style="width:40px;height:40px;border-radius:50%;flex:none;object-fit:cover;background:#eee" />' +
+            '<div style="flex:1;min-width:0">' +
+              '<div style="display:flex;align-items:center;gap:6px">' +
+                '<span class="coord-live-badge" style="display:none;flex:none;font-size:10px;font-weight:700;color:#fff;background:#e0322a;border-radius:5px;padding:1px 6px">ON AIR</span>' +
+                '<span style="font-weight:700;font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + '</span>' +
+              '</div>' +
+              '<div class="coord-title" style="display:none;font-size:11.5px;color:#6b6259;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px"></div>' +
+              '<div style="font-size:11px;color:#a09890">@' + item.soop_id + '</div>' +
             '</div>' +
-            '<div class="coord-title" style="display:none;font-size:11.5px;color:#6b6259;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px"></div>' +
-            '<div style="font-size:11px;color:#a09890">@' + item.soop_id + '</div>' +
+          '</a>' +
+          '<div style="flex:none;display:flex;align-items:center;gap:3px">' +
+            '<button data-vote-up="' + item.soop_id + '" data-name="' + (item.name||'').replace(/"/g,'') + '" ' + upDisabled + ' ' +
+              'style="border:none;background:none;cursor:' + (upDisabled?'default':'pointer') + ';font-size:17px;padding:2px 3px;opacity:' + upOpacity + '">👍</button>' +
+            '<span style="min-width:24px;text-align:center;font-weight:700;font-size:14px;color:' + scoreColor + '">' + item.score + '</span>' +
+            '<button data-vote-down="' + item.soop_id + '" data-name="' + (item.name||'').replace(/"/g,'') + '" ' + downDisabled + ' ' +
+              'style="border:none;background:none;cursor:' + (downDisabled?'default':'pointer') + ';font-size:17px;padding:2px 3px;opacity:' + downOpacity + '">👎</button>' +
           '</div>' +
-          '<span style="flex:none;background:#eff5ff;color:#2563eb;font-weight:700;font-size:13px;border-radius:20px;padding:5px 12px">👍 ' + item.count + '</span>' +
-        '</a>';
+        '</div>';
     }).join('');
   }
 
-  function renderCooldown(){
-    if(canVote()){ cooldownEl.textContent = ''; return; }
-    const remain = HOUR - (Date.now() - lastVoteAt());
-    const min = Math.ceil(remain / 60000);
-    cooldownEl.textContent = '다음 추천까지 ' + min + '분';
-  }
-
-  async function recommend(rawId, name){
-    if(!canVote()){
-      alert('추천은 1시간에 한 번만 가능해요. 잠시 후 다시 시도해주세요.');
-      return;
-    }
+  // 업/다운 투표: voter_id+soop_id 유니크로 내 투표 1행 upsert
+  async function castVote(rawId, name, vote){
     const soop_id = extractId(rawId);
-    if(!soop_id){ alert('아이디를 입력해주세요.'); return; }
-    const res = await sb.from('live_recommends').insert({
+    if(!soop_id) return;
+    const prev = myVotes()[soop_id];
+    if(prev === vote) return;               // 같은 방향 재클릭 무시
+    if(prev === 1 && vote === -1) return;    // 업→다운 금지
+    if(prev === -1 && vote === 1) return;    // 다운→업 금지
+    const res = await sb.from('live_recommends').upsert({
       soop_id: soop_id,
       display_name: name || soop_id,
-      voter_id: voterId()
-    });
-    if(res.error){ alert('추천 실패: ' + res.error.message); return; }
-    markVoted();
-    input.value = '';
+      voter_id: voterId(),
+      vote: vote,
+      created_at: new Date().toISOString()
+    }, { onConflict: 'voter_id,soop_id' });
+    if(res.error){ alert('투표 실패: ' + res.error.message); return; }
+    setMyVote(soop_id, vote);
     await loadRecommends();
-    alert('추천했어요! 👍');
+  }
+
+  // 투표 버튼 이벤트 위임
+  listEl.addEventListener('click', function(e){
+    const up = e.target.closest('[data-vote-up]');
+    const down = e.target.closest('[data-vote-down]');
+    if(up && !up.hasAttribute('disabled')) castVote(up.dataset.voteUp, up.dataset.name, 1);
+    if(down && !down.hasAttribute('disabled')) castVote(down.dataset.voteDown, down.dataset.name, -1);
+  });
+
+  // 아이디 직접 입력 = 업 투표로 목록에 추가
+  function addByInput(){
+    const id = extractId(input.value);
+    if(!id){ alert('아이디를 입력해주세요.'); return; }
+    castVote(id, id, 1);
+    input.value = '';
   }
 
   // 등록 스트리머 칩
@@ -711,17 +740,18 @@ tabLinks.forEach(btn => {
   }
   chipsEl.addEventListener('click', function(e){
     const chip = e.target.closest('[data-sid]');
-    if(chip) recommend(chip.dataset.sid, chip.dataset.name);
+    if(chip) castVote(chip.dataset.sid, chip.dataset.name, 1); // 칩 = 업 투표로 추가
   });
 
   // 버튼/모달 이벤트
   document.getElementById('coordBtn').addEventListener('click', function(){
     renderStreamerChips();
     loadRecommends();
+    if(cooldownEl) cooldownEl.textContent = '';
     modal.style.display = 'flex';
   });
-  document.getElementById('coordAddBtn').addEventListener('click', function(){ recommend(input.value); });
-  input.addEventListener('keydown', function(e){ if(e.key === 'Enter') recommend(input.value); });
+  document.getElementById('coordAddBtn').addEventListener('click', addByInput);
+  input.addEventListener('keydown', function(e){ if(e.key === 'Enter') addByInput(); });
   document.getElementById('coordModalClose').addEventListener('click', function(){ modal.style.display = 'none'; });
   modal.addEventListener('click', function(e){ if(e.target === modal) modal.style.display = 'none'; });
 })();
