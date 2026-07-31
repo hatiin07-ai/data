@@ -605,13 +605,13 @@ tabLinks.forEach(btn => {
 
   // 1시간 지난 추천 삭제 후, 유효 추천 로드 → 집계
   async function loadRecommends(){
-    const cutoff = new Date(Date.now() - HOUR).toISOString();
-    // 만료분 정리 (best-effort)
-    sb.from('live_recommends').delete().lt('created_at', cutoff).then(function(){}, function(){});
-    const res = await sb.from('live_recommends').select('*').gte('created_at', cutoff);
+    // 전체 로드 후 방송별 마지막 추천 시각 계산
+    const res = await sb.from('live_recommends').select('*');
     const rows = res.data || [];
     const mine = myVotes();
-    // soop_id별 점수 집계 (vote 합계)
+    const now = Date.now();
+
+    // soop_id별 집계 + 방송별 최신 투표 시각
     const map = {};
     rows.forEach(function(r){
       if(!map[r.soop_id]) map[r.soop_id] = { soop_id: r.soop_id, name: r.display_name || r.soop_id, score: 0, latest: r.created_at };
@@ -619,6 +619,21 @@ tabLinks.forEach(btn => {
       if(r.created_at > map[r.soop_id].latest) map[r.soop_id].latest = r.created_at;
       if(r.display_name) map[r.soop_id].name = r.display_name;
     });
+
+    // 방송별 마지막 추천이 1시간 경과했으면 그 방송의 모든 행 삭제
+    const expiredIds = [];
+    Object.values(map).forEach(function(m){
+      if(now - new Date(m.latest).getTime() >= HOUR) expiredIds.push(m.soop_id);
+    });
+    if(expiredIds.length){
+      sb.from('live_recommends').delete().in('soop_id', expiredIds).then(function(){}, function(){});
+      // 내 투표 캐시에서도 제거
+      const mv = myVotes();
+      expiredIds.forEach(function(id){ delete mv[id]; });
+      localStorage.setItem('coord_myvotes', JSON.stringify(mv));
+      expiredIds.forEach(function(id){ delete map[id]; });
+    }
+
     const list = Object.values(map).sort(function(a,b){
       if(b.score !== a.score) return b.score - a.score; // 점수 높은 순
       return b.latest.localeCompare(a.latest);           // 동률이면 최신순
@@ -704,6 +719,19 @@ tabLinks.forEach(btn => {
     if(prev === vote) return;               // 같은 방향 재클릭 무시
     if(prev === 1 && vote === -1) return;    // 업→다운 금지
     if(prev === -1 && vote === 1) return;    // 다운→업 금지
+
+    // 온에어인 방송만 추천/투표 가능 — 방송 정보 확인
+    let live;
+    try{
+      const d = await fetch('/api/soop-status?id=' + encodeURIComponent(soop_id)).then(function(r){ return r.json(); });
+      live = d.isLive;
+      if(d.nick) name = d.nick; // 닉네임 있으면 표시명으로 사용
+    }catch(e){ live = false; }
+    if(!live){
+      alert('지금 방송 중인 스트리머만 추천할 수 있어요.');
+      return;
+    }
+
     const res = await sb.from('live_recommends').upsert({
       soop_id: soop_id,
       display_name: name || soop_id,
