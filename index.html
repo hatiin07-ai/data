@@ -217,6 +217,23 @@
     </div>
   </div>
 
+  <div id="archiveWarnModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:210;align-items:center;justify-content:center;padding:16px">
+    <div style="background:#14101a;border:1px solid #3a2a4a;border-radius:18px;max-width:400px;width:100%;padding:32px 26px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.5)">
+      <div style="font-size:38px;margin-bottom:12px">🕳️</div>
+      <div style="font-family:'A2z',sans-serif;font-weight:800;font-size:20px;color:#e8dff5;margin-bottom:12px">여기는 심연입니다</div>
+      <div style="font-size:13.5px;color:#a99bbf;line-height:1.7;margin-bottom:26px">
+        이 너머에는 되돌릴 수 없는 것들이 있습니다.<br>
+        한번 본 것은 잊을 수 없으며,<br>
+        그 책임은 오롯이 당신의 몫입니다.<br><br>
+        <span style="color:#c9a3e8;font-size:12.5px">…그래도 들어가시겠습니까?</span>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button id="archiveWarnNo" style="flex:1;font-family:'A2z',sans-serif;font-weight:700;font-size:14px;color:#a99bbf;background:#241b30;border:1px solid #3a2a4a;border-radius:12px;padding:13px;cursor:pointer">아니요, 돌아갈게요</button>
+        <button id="archiveWarnYes" style="flex:1;font-family:'A2z',sans-serif;font-weight:700;font-size:14px;color:#fff;background:#6b21a8;border:none;border-radius:12px;padding:13px;cursor:pointer">네, 들어갑니다</button>
+      </div>
+    </div>
+  </div>
+
   <div id="coordModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:16px">
     <div style="background:#fff;border-radius:18px;max-width:440px;width:100%;max-height:88vh;overflow:auto;padding:24px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
@@ -255,7 +272,7 @@
     <button class="tab-link" data-target="panelSched">방송 시간표</button>
     <a class="tab-link tab-viewer" href="/viewer/" target="_blank" rel="noopener">📺 뷰어</a>
     <button class="tab-link tab-coord" id="coordBtn">📍 좌표추천</button>
-    <a class="tab-link tab-archive" href="/archive/" target="_blank" rel="noopener">📁 아카이브</a>
+    <button class="tab-link tab-archive" id="archiveBtn">📁 아카이브</button>
   </nav>
 
   <div id="panelCal" class="panel active">
@@ -628,6 +645,20 @@ tabLinks.forEach(btn => {
 
   // 설치 완료되면 버튼 숨김
   window.addEventListener('appinstalled', function(){ bar.style.display = 'none'; modal.style.display = 'none'; });
+})();
+
+// ── 아카이브 진입 경고 ─────────────────────────────────────
+(function(){
+  const btn = document.getElementById('archiveBtn');
+  const modal = document.getElementById('archiveWarnModal');
+  if(!btn || !modal) return;
+  btn.addEventListener('click', function(){ modal.style.display = 'flex'; });
+  document.getElementById('archiveWarnNo').addEventListener('click', function(){ modal.style.display = 'none'; });
+  document.getElementById('archiveWarnYes').addEventListener('click', function(){
+    modal.style.display = 'none';
+    window.open('/archive/', '_blank', 'noopener');
+  });
+  modal.addEventListener('click', function(e){ if(e.target === modal) modal.style.display = 'none'; });
 })();
 
 // ── 좌표 추천 ──────────────────────────────────────────────
