@@ -190,3 +190,22 @@ create policy "public insert archive" on public.archive_items for insert with ch
 create policy "auth delete archive" on public.archive_items for delete using (auth.role() = 'authenticated');
 
 create index if not exists idx_archive_created on public.archive_items (created_at desc);
+
+-- 12) 아카이브 이미지 추천 (따봉, 1인 1추천 토글)
+create table if not exists public.archive_likes (
+  id uuid primary key default gen_random_uuid(),
+  item_id uuid not null references public.archive_items(id) on delete cascade,
+  voter_id text not null,
+  created_at timestamptz not null default now()
+);
+-- 1인당 이미지당 1회
+create unique index if not exists uq_archive_likes_voter_item on public.archive_likes (voter_id, item_id);
+alter table public.archive_likes enable row level security;
+drop policy if exists "public read archive_likes" on public.archive_likes;
+drop policy if exists "public insert archive_likes" on public.archive_likes;
+drop policy if exists "public delete archive_likes" on public.archive_likes;
+create policy "public read archive_likes" on public.archive_likes for select using (true);
+create policy "public insert archive_likes" on public.archive_likes for insert with check (true);
+-- 자기 추천 취소 가능 (토글)
+create policy "public delete archive_likes" on public.archive_likes for delete using (true);
+create index if not exists idx_archive_likes_item on public.archive_likes (item_id);

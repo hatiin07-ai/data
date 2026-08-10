@@ -21,6 +21,16 @@
 
   .toolbar{ display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
   .btn-upload{ background:var(--accent); color:#fff; border:none; border-radius:12px; padding:11px 20px; font-family:'A2z',sans-serif; font-weight:700; font-size:14px; cursor:pointer; }
+  .sort-tabs{ display:flex; gap:4px; background:#f2ece3; border-radius:12px; padding:3px; }
+  .sort-tab{ border:none; background:none; font-family:'A2z',sans-serif; font-size:13px; font-weight:700; color:var(--ink-soft); padding:7px 14px; border-radius:9px; cursor:pointer; }
+  .sort-tab.active{ background:#fff; color:var(--accent); box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  /* 카드 추천 배지 */
+  .card .like-badge{ position:absolute; bottom:6px; right:6px; display:flex; align-items:center; gap:3px; font-size:11px; font-weight:700; color:#fff; background:rgba(0,0,0,.55); border-radius:12px; padding:3px 8px; }
+  /* 라이트박스 따봉 */
+  .lb-like{ position:absolute; bottom:24px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.15); border:none; border-radius:24px; padding:12px 24px; cursor:pointer; color:#fff; font-family:'A2z',sans-serif; font-weight:700; font-size:16px; backdrop-filter:blur(4px); }
+  .lb-like:hover{ background:rgba(255,255,255,.25); }
+  .lb-like.liked{ background:rgba(224,64,64,.9); }
+  .lb-like .lb-count{ font-size:15px; }
 
   .gallery{ display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:12px; }
   .card{ position:relative; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--card); aspect-ratio:1/1; }
@@ -73,6 +83,10 @@
 
   <div class="toolbar">
     <button class="btn-upload" id="uploadBtn">＋ 업로드</button>
+    <div class="sort-tabs">
+      <button class="sort-tab active" data-sort="recent">최신순</button>
+      <button class="sort-tab" data-sort="likes">추천순</button>
+    </div>
     <span id="loginStatus" style="display:none;font-size:12px;color:#16a34a">● 로그인 상태</span>
   </div>
 
@@ -84,6 +98,7 @@
   <div class="lightbox" id="lightbox">
     <button class="close" id="lbClose">✕</button>
     <img id="lbImg" src="" alt="" />
+    <button class="lb-like" id="lbLike">👍 <span class="lb-count" id="lbCount">0</span></button>
   </div>
 
   <!-- 업로드 모달 -->
@@ -110,41 +125,134 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let isAdmin = false;
+let currentSort = 'recent'; // 'recent' | 'likes'
+let itemsCache = [];        // 추천수 포함 아이템 캐시
 
 const galleryEl = document.getElementById('gallery');
 const fileUrl = function(key){ return '/api/r2/file?key=' + encodeURIComponent(key); };
 
+// 방문자 식별
+function voterId(){
+  let v = localStorage.getItem('archive_voter');
+  if(!v){ v = 'av_' + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('archive_voter', v); }
+  return v;
+}
+// 내가 추천한 이미지 캐시
+function myLikes(){
+  try{ return JSON.parse(localStorage.getItem('archive_mylikes') || '{}'); }catch(e){ return {}; }
+}
+function setMyLike(itemId, liked){
+  const m = myLikes();
+  if(liked) m[itemId] = 1; else delete m[itemId];
+  localStorage.setItem('archive_mylikes', JSON.stringify(m));
+}
+
 // ── 갤러리 로드 ────────────────────────────────────────────
 async function loadGallery(){
-  const res = await sb.from('archive_items').select('*').order('created_at', { ascending: false });
-  const items = res.data || [];
-  if(!items.length){
+  // 이미지 + 추천수 동시 로드
+  const [itemsRes, likesRes] = await Promise.all([
+    sb.from('archive_items').select('*'),
+    sb.from('archive_likes').select('item_id')
+  ]);
+  const items = itemsRes.data || [];
+  const likes = likesRes.data || [];
+  // 추천수 집계
+  const likeCount = {};
+  likes.forEach(function(l){ likeCount[l.item_id] = (likeCount[l.item_id] || 0) + 1; });
+  itemsCache = items.map(function(it){ return Object.assign({}, it, { likes: likeCount[it.id] || 0 }); });
+  renderGallery();
+}
+
+function renderGallery(){
+  if(!itemsCache.length){
     galleryEl.innerHTML = '<div class="empty">아직 업로드된 이미지가 없어요.</div>';
     return;
   }
-  galleryEl.innerHTML = items.map(function(it){
+  // 정렬
+  const sorted = itemsCache.slice().sort(function(a,b){
+    if(currentSort === 'likes'){
+      if(b.likes !== a.likes) return b.likes - a.likes;
+      return b.created_at.localeCompare(a.created_at); // 동률이면 최신순
+    }
+    return b.created_at.localeCompare(a.created_at);    // 최신순
+  });
+  galleryEl.innerHTML = sorted.map(function(it){
     const thumb = it.thumb_key ? fileUrl(it.thumb_key) : fileUrl(it.file_key);
     const orig = fileUrl(it.file_key);
     const ext = (it.file_type || '').split('/')[1] || '';
     return '<div class="card" data-id="' + it.id + '" data-orig="' + orig + '" data-filekey="' + it.file_key + '" data-thumbkey="' + (it.thumb_key||'') + '">' +
-      '<img src="' + thumb + '" loading="lazy" alt="" data-open="' + orig + '" />' +
+      '<img src="' + thumb + '" loading="lazy" alt="" data-open="' + orig + '" data-openid="' + it.id + '" />' +
       (ext ? '<span class="type-tag">' + ext + '</span>' : '') +
+      (it.likes > 0 ? '<span class="like-badge">👍 ' + it.likes + '</span>' : '') +
       '<button class="del-btn" data-del="' + it.id + '">✕</button>' +
     '</div>';
   }).join('');
 }
 
-// ── 라이트박스 (원본/애니메이션 보기) ──────────────────────
+// 정렬 토글
+document.querySelector('.sort-tabs').addEventListener('click', function(e){
+  const tab = e.target.closest('[data-sort]');
+  if(!tab) return;
+  currentSort = tab.dataset.sort;
+  document.querySelectorAll('.sort-tab').forEach(function(t){ t.classList.toggle('active', t === tab); });
+  renderGallery();
+});
+
+// ── 라이트박스 (원본/애니메이션 보기 + 추천) ───────────────
 const lightbox = document.getElementById('lightbox');
 const lbImg = document.getElementById('lbImg');
+const lbLike = document.getElementById('lbLike');
+const lbCount = document.getElementById('lbCount');
+let lbItemId = null;
+
 galleryEl.addEventListener('click', function(e){
   const img = e.target.closest('[data-open]');
   const del = e.target.closest('[data-del]');
   if(del){ e.stopPropagation(); handleDelete(del.dataset.del); return; }
-  if(img){ lbImg.src = img.dataset.open; lightbox.classList.add('open'); }
+  if(img){ openLightbox(img.dataset.open, img.dataset.openid); }
 });
-document.getElementById('lbClose').addEventListener('click', function(){ lightbox.classList.remove('open'); lbImg.src=''; });
-lightbox.addEventListener('click', function(e){ if(e.target === lightbox){ lightbox.classList.remove('open'); lbImg.src=''; } });
+
+function openLightbox(src, itemId){
+  lbImg.src = src;
+  lbItemId = itemId;
+  const item = itemsCache.find(function(x){ return x.id === itemId; });
+  const liked = !!myLikes()[itemId];
+  lbCount.textContent = item ? item.likes : 0;
+  lbLike.classList.toggle('liked', liked);
+  lightbox.classList.add('open');
+}
+function closeLightbox(){ lightbox.classList.remove('open'); lbImg.src=''; lbItemId = null; }
+
+document.getElementById('lbClose').addEventListener('click', closeLightbox);
+lightbox.addEventListener('click', function(e){ if(e.target === lightbox) closeLightbox(); });
+
+// 따봉 토글
+lbLike.addEventListener('click', async function(){
+  if(!lbItemId) return;
+  const liked = !!myLikes()[lbItemId];
+  const item = itemsCache.find(function(x){ return x.id === lbItemId; });
+  lbLike.disabled = true;
+  try{
+    if(liked){
+      // 취소
+      await sb.from('archive_likes').delete().eq('item_id', lbItemId).eq('voter_id', voterId());
+      setMyLike(lbItemId, false);
+      if(item) item.likes = Math.max(0, item.likes - 1);
+    } else {
+      // 추천
+      const res = await sb.from('archive_likes').insert({ item_id: lbItemId, voter_id: voterId() });
+      if(res.error && res.error.code !== '23505'){ throw new Error(res.error.message); } // 중복은 무시
+      setMyLike(lbItemId, true);
+      if(item) item.likes = item.likes + 1;
+    }
+    lbCount.textContent = item ? item.likes : 0;
+    lbLike.classList.toggle('liked', !liked);
+    renderGallery(); // 배지/정렬 갱신
+  }catch(e){
+    alert('추천 처리 실패: ' + e.message);
+  }
+  lbLike.disabled = false;
+});
 
 // ── 삭제 (어드민) ──────────────────────────────────────────
 async function handleDelete(id){
