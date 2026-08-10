@@ -46,6 +46,12 @@
   .empty{ text-align:center; color:#b5ada3; font-size:14px; padding:60px 0; grid-column:1/-1; }
   .loading{ text-align:center; color:var(--ink-soft); font-size:14px; padding:40px 0; grid-column:1/-1; }
 
+  /* VOD 재생 모달 */
+  .vod-modal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:110; align-items:center; justify-content:center; padding:20px; }
+  .vod-modal.open{ display:flex; }
+  .vod-player-wrap{ width:100%; max-width:900px; aspect-ratio:16/9; background:#000; border-radius:10px; overflow:hidden; }
+  .vod-player-wrap iframe{ width:100%; height:100%; border:0; display:block; }
+  .vod-modal .close{ position:absolute; top:16px; right:20px; width:40px; height:40px; border:none; border-radius:50%; background:rgba(255,255,255,.15); color:#fff; font-size:20px; cursor:pointer; z-index:2; }
   /* 라이트박스 (원본 보기, 애니메이션 재생) */
   .lightbox{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.9); z-index:100; align-items:center; justify-content:center; padding:20px; }
   .lightbox.open{ display:flex; }
@@ -106,6 +112,14 @@
     <button class="close" id="lbClose">✕</button>
     <img id="lbImg" src="" alt="" />
     <button class="lb-like" id="lbLike">👍 <span class="lb-count" id="lbCount">0</span></button>
+  </div>
+
+  <!-- VOD 재생 모달 -->
+  <div class="vod-modal" id="vodPlayModal">
+    <button class="close" id="vodPlayClose">✕</button>
+    <div class="vod-player-wrap">
+      <iframe id="vodPlayer" src="" frameborder="0" allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe>
+    </div>
   </div>
 
   <!-- 업로드 모달 -->
@@ -217,10 +231,13 @@ function renderGallery(){
   galleryEl.innerHTML = sorted.map(function(it){
     const isVod = it.kind === 'vod';
     if(isVod){
-      // VOD 카드: 외부 썸네일 + 재생 아이콘, 클릭 시 원본으로 이동
+      // VOD 카드: 외부 썸네일 + 재생 아이콘, 클릭 시 모달에서 재생
       const thumb = it.thumb_url || '';
+      // title_no 추출해서 embed URL 구성
+      const tnMatch = (it.vod_url || '').match(/(\d{6,})/);
+      const embedUrl = tnMatch ? 'https://vod.sooplive.com/player/' + tnMatch[1] + '/embed?autoPlay=true&showChat=false&mutePlay=false' : '';
       return '<div class="card card-vod" data-id="' + it.id + '" data-vodurl="' + (it.vod_url||'') + '">' +
-        '<img src="' + thumb + '" loading="lazy" alt="" data-vodopen="' + (it.vod_url||'') + '" onerror="this.style.background=\'#ddd\'" />' +
+        '<img src="' + thumb + '" loading="lazy" alt="" data-vodplay="' + embedUrl + '" data-voditem="' + it.id + '" onerror="this.style.background=\'#ddd\'" />' +
         '<span class="type-tag vod-tag">▶ VOD</span>' +
         '<span class="play-icon">▶</span>' +
         (it.vod_title ? '<span class="vod-caption">' + it.vod_title + '</span>' : '') +
@@ -258,12 +275,27 @@ let lbItemId = null;
 
 galleryEl.addEventListener('click', function(e){
   const img = e.target.closest('[data-open]');
-  const vod = e.target.closest('[data-vodopen]');
+  const vod = e.target.closest('[data-vodplay]');
   const del = e.target.closest('[data-del]');
   if(del){ e.stopPropagation(); handleDelete(del.dataset.del); return; }
-  if(vod){ window.open(vod.dataset.vodopen, '_blank', 'noopener'); return; }
+  if(vod){ openVodPlayer(vod.dataset.vodplay); return; }
   if(img){ openLightbox(img.dataset.open, img.dataset.openid); }
 });
+
+// VOD 재생 모달
+const vodPlayModal = document.getElementById('vodPlayModal');
+const vodPlayer = document.getElementById('vodPlayer');
+function openVodPlayer(embedUrl){
+  if(!embedUrl) return;
+  vodPlayer.src = embedUrl;
+  vodPlayModal.classList.add('open');
+}
+function closeVodPlayer(){
+  vodPlayModal.classList.remove('open');
+  vodPlayer.src = 'about:blank'; // 재생 확실히 중지
+}
+document.getElementById('vodPlayClose').addEventListener('click', closeVodPlayer);
+vodPlayModal.addEventListener('click', function(e){ if(e.target === vodPlayModal) closeVodPlayer(); });
 
 function openLightbox(src, itemId){
   lbImg.src = src;
