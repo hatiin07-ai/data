@@ -114,6 +114,7 @@
   .up-row .up-btn{ border:none; border-radius:9px; padding:8px 12px; font-family:'A2z',sans-serif; font-weight:700; font-size:12.5px; cursor:pointer; }
   .up-btn-rank{ background:#ecfbff; color:#0891b2; }
   .up-btn-go{ background:#f2ece3; color:var(--ink); text-decoration:none; display:inline-flex; align-items:center; }
+  .up-btn-edit{ background:#eef7ff; color:#0369a1; }
   .up-btn-del{ background:#fdecea; color:#c0392b; }
   /* UP 순위 행 */
   .rank-row{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-bottom:1px solid var(--line); text-decoration:none; }
@@ -313,7 +314,7 @@
   <!-- 업 요청 등록 모달 -->
   <div id="upFormModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:16px">
     <div style="background:#fff;border-radius:18px;max-width:420px;width:100%;padding:24px">
-      <h2 style="font-size:18px;font-weight:800;margin:0 0 16px">업 요청 등록</h2>
+      <h2 id="upfTitle" style="font-size:18px;font-weight:800;margin:0 0 16px">업 요청 등록</h2>
       <label class="up-field">
         <span>게시글 URL <b>*</b></span>
         <input type="text" id="upfUrl" placeholder="https://www.sooplive.com/station/.../post/..." />
@@ -689,6 +690,8 @@ tabLinks.forEach(btn => {
 (function(){
   const sb = initSupabase();
   const listBody = document.getElementById('upListBody');
+  let editingId = null;
+  let cachedRows = [];
 
   function parsePostUrl(url){
     const m = (url||'').match(/station\/([^\/]+)\/post\/(\d+)/);
@@ -708,6 +711,7 @@ tabLinks.forEach(btn => {
   async function loadUpRequests(){
     const res = await sb.from('up_requests').select('*').order('deadline', { ascending: true, nullsFirst: false });
     const rows = res.data || [];
+    cachedRows = rows;
     if(!rows.length){
       listBody.innerHTML = '<div style="text-align:center;color:#b5ada3;font-size:13px;padding:30px 0">등록된 업 요청이 없어요.</div>';
       return;
@@ -726,6 +730,7 @@ tabLinks.forEach(btn => {
         '<div class="up-actions">' +
           '<button class="up-btn up-btn-rank" data-rank="' + r.id + '" data-bj="' + (r.bj_id||'') + '" data-post="' + (r.post_no||'') + '" data-nick="' + esc(r.streamer_nick).replace(/"/g,'') + '">📊 순위</button>' +
           '<a class="up-btn up-btn-go" href="' + esc(r.post_url) + '" target="_blank" rel="noopener">바로가기</a>' +
+          '<button class="up-btn up-btn-edit admin-only" data-edit="' + r.id + '" style="display:none">수정</button>' +
           '<button class="up-btn up-btn-del admin-only" data-del="' + r.id + '" style="display:none">삭제</button>' +
         '</div>' +
       '</div>';
@@ -743,15 +748,20 @@ tabLinks.forEach(btn => {
     document.querySelectorAll('#panelUp .admin-only').forEach(function(el){ el.style.display = isUpAdmin ? '' : 'none'; });
   }
 
-  // 순위 조회
+  // 순위 조회 / 수정 / 삭제
   listBody.addEventListener('click', async function(e){
     const rankBtn = e.target.closest('[data-rank]');
+    const editBtn = e.target.closest('[data-edit]');
     const delBtn = e.target.closest('[data-del]');
     if(delBtn){
       if(!confirm('이 업 요청을 삭제할까요?')) return;
       const res = await sb.from('up_requests').delete().eq('id', delBtn.dataset.del);
       if(res.error){ alert('삭제 실패: ' + res.error.message); return; }
       loadUpRequests();
+      return;
+    }
+    if(editBtn){
+      openForm(editBtn.dataset.edit);
       return;
     }
     if(rankBtn){
@@ -793,16 +803,36 @@ tabLinks.forEach(btn => {
   document.getElementById('upRankClose').addEventListener('click', function(){ document.getElementById('upRankModal').style.display = 'none'; });
   document.getElementById('upRankModal').addEventListener('click', function(e){ if(e.target === this) this.style.display = 'none'; });
 
-  // 등록 폼
+  // 등록/수정 폼 (editingId가 있으면 수정 모드)
   const formModal = document.getElementById('upFormModal');
-  document.getElementById('upAddBtn').addEventListener('click', function(){
-    document.getElementById('upfUrl').value = '';
-    document.getElementById('upfNick').value = '';
-    document.getElementById('upfGoal').value = '';
-    document.getElementById('upfDeadline').value = '';
-    document.getElementById('upfMsg').textContent = '';
+
+  function openForm(id){
+    editingId = id || null;
+    const msg = document.getElementById('upfMsg');
+    msg.textContent = '';
+    if(editingId){
+      // 수정 모드: 기존 값 채우기
+      const r = cachedRows.find(function(x){ return x.id === editingId; });
+      if(!r) return;
+      document.getElementById('upfTitle').textContent = '업 요청 수정';
+      document.getElementById('upfSubmit').textContent = '저장';
+      document.getElementById('upfUrl').value = r.post_url || '';
+      document.getElementById('upfNick').value = r.streamer_nick || '';
+      document.getElementById('upfGoal').value = r.goal || '';
+      document.getElementById('upfDeadline').value = r.deadline || '';
+    } else {
+      // 등록 모드
+      document.getElementById('upfTitle').textContent = '업 요청 등록';
+      document.getElementById('upfSubmit').textContent = '등록';
+      document.getElementById('upfUrl').value = '';
+      document.getElementById('upfNick').value = '';
+      document.getElementById('upfGoal').value = '';
+      document.getElementById('upfDeadline').value = '';
+    }
     formModal.style.display = 'flex';
-  });
+  }
+
+  document.getElementById('upAddBtn').addEventListener('click', function(){ openForm(null); });
   document.getElementById('upfCancel').addEventListener('click', function(){ formModal.style.display = 'none'; });
   formModal.addEventListener('click', function(e){ if(e.target === formModal) formModal.style.display = 'none'; });
 
@@ -816,15 +846,22 @@ tabLinks.forEach(btn => {
     const parsed = parsePostUrl(url);
     if(!parsed){ msg.textContent = 'SOOP 게시글 URL 형식이 아니에요.'; return; }
     msg.textContent = '';
-    const res = await sb.from('up_requests').insert({
+    const payload = {
       post_url: url,
       bj_id: parsed.bj,
       post_no: parsed.post,
       streamer_nick: nick,
       goal: goal || null,
       deadline: deadline || null
-    });
-    if(res.error){ msg.textContent = '등록 실패: ' + res.error.message; return; }
+    };
+    let res;
+    if(editingId){
+      res = await sb.from('up_requests').update(payload).eq('id', editingId).select();
+      if(!res.error && (!res.data || !res.data.length)){ msg.textContent = '수정 권한이 없어요. 관리자로 로그인했는지 확인해주세요.'; return; }
+    } else {
+      res = await sb.from('up_requests').insert(payload);
+    }
+    if(res.error){ msg.textContent = (editingId ? '수정' : '등록') + ' 실패: ' + res.error.message; return; }
     formModal.style.display = 'none';
     loadUpRequests();
   });
