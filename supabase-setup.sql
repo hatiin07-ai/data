@@ -215,3 +215,7 @@ alter table public.archive_items add column if not exists kind text default 'ima
 alter table public.archive_items add column if not exists vod_url text;      -- VOD 원본 URL
 alter table public.archive_items add column if not exists vod_title text;    -- VOD 제목
 alter table public.archive_items add column if not exists thumb_url text;    -- 외부 썸네일 URL(VOD용, R2 아님)
+
+-- 14) 아카이브 채널 분기 (서브컬쳐 / 심연)
+alter table public.archive_items add column if not exists channel text default 'subculture';  -- 'subculture' | 'abyss'
+create index if not exists idx_archive_channel on public.archive_items (channel, created_at desc);

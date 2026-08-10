@@ -65,6 +65,12 @@
   .up-box h2{ font-size:18px; font-weight:800; margin:0 0 6px; }
   .up-tabs{ display:flex; gap:4px; background:#f2ece3; border-radius:12px; padding:3px; margin-bottom:16px; }
   .up-tab{ flex:1; border:none; background:none; font-family:'A2z',sans-serif; font-size:13px; font-weight:700; color:var(--ink-soft); padding:9px; border-radius:9px; cursor:pointer; }
+  .up-channel{ margin-bottom:14px; }
+  .uc-label{ font-size:12px; color:var(--ink-soft); display:block; margin-bottom:6px; }
+  .uc-options{ display:flex; gap:6px; }
+  .uc-opt{ flex:1; font-family:'A2z',sans-serif; font-weight:700; font-size:13px; padding:10px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--ink-soft); cursor:pointer; }
+  .uc-opt.active{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  .uc-opt.active[data-upchannel="abyss"]{ background:#6b21a8; border-color:#6b21a8; }
   .up-tab.active{ background:#fff; color:var(--accent); box-shadow:0 1px 3px rgba(0,0,0,.08); }
   .up-box .hint{ font-size:12px; color:var(--ink-soft); margin-bottom:16px; line-height:1.5; }
   .drop{ border:2px dashed var(--line); border-radius:12px; padding:28px 16px; text-align:center; color:var(--ink-soft); font-size:13px; cursor:pointer; margin-bottom:12px; }
@@ -85,6 +91,27 @@
   .up-do{ background:var(--accent); color:#fff; }
   .up-cancel{ background:#f2ece3; color:var(--ink-soft); }
   .up-progress{ font-size:12px; color:var(--accent); text-align:center; margin-top:8px; min-height:16px; }
+  /* 채널 탭 */
+  .channel-tabs{ display:flex; gap:8px; margin-bottom:18px; }
+  .channel-tab{ font-family:'A2z',sans-serif; font-weight:700; font-size:15px; padding:10px 22px; border-radius:20px; border:1px solid var(--line); background:var(--card); color:var(--ink-soft); cursor:pointer; }
+  .channel-tab.active{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  .channel-tab.abyss.active{ background:#6b21a8; border-color:#6b21a8; }
+  /* 관리 버튼 */
+  .btn-manage{ font-family:'A2z',sans-serif; font-weight:700; font-size:13px; padding:9px 16px; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; }
+  .btn-manage.active{ background:#2c2622; color:#fff; border-color:#2c2622; }
+  /* 관리 모드 바 */
+  .manage-bar{ display:flex; align-items:center; gap:8px; background:#2c2622; border-radius:12px; padding:10px 14px; margin-bottom:16px; color:#fff; font-size:13px; }
+  .manage-bar button{ font-family:'A2z',sans-serif; font-weight:700; font-size:12.5px; padding:8px 14px; border-radius:9px; border:none; cursor:pointer; }
+  .mb-move{ background:#6b21a8; color:#fff; }
+  .mb-move[data-move="subculture"]{ background:var(--accent); }
+  .mb-cancel{ background:rgba(255,255,255,.15); color:#fff; }
+  /* 관리 모드 선택 표시 */
+  .card.selectable{ cursor:pointer; }
+  .card.selected{ outline:3px solid var(--accent); outline-offset:-3px; }
+  .card .sel-check{ position:absolute; top:6px; right:6px; width:24px; height:24px; border-radius:50%; background:rgba(255,255,255,.9); border:2px solid var(--accent); display:none; align-items:center; justify-content:center; font-size:13px; color:var(--accent); z-index:3; }
+  body.manage-mode .card .sel-check{ display:flex; }
+  body.manage-mode .card .del-btn{ display:none !important; }
+  .card.selected .sel-check{ background:var(--accent); color:#fff; }
 </style>
 </head>
 <body>
@@ -92,7 +119,12 @@
     <h1>📁 아카이브</h1>
     <a class="back" href="/">← 캘린더</a>
   </div>
-  <div class="sub">누구나 이미지를 업로드할 수 있어요. (webp · gif · png)</div>
+  <div class="sub">누구나 이미지·VOD를 올릴 수 있어요.</div>
+
+  <div class="channel-tabs" id="channelTabs">
+    <button class="channel-tab active" data-channel="subculture">🎨 서브컬쳐</button>
+    <button class="channel-tab abyss" data-channel="abyss">🕳️ 심연</button>
+  </div>
 
   <div class="toolbar">
     <button class="btn-upload" id="uploadBtn">＋ 업로드</button>
@@ -100,7 +132,17 @@
       <button class="sort-tab active" data-sort="recent">최신순</button>
       <button class="sort-tab" data-sort="likes">추천순</button>
     </div>
+    <button class="btn-manage" id="manageBtn" style="display:none">☑️ 선택 이동</button>
     <span id="loginStatus" style="display:none;font-size:12px;color:#16a34a">● 로그인 상태</span>
+  </div>
+
+  <!-- 관리 모드 액션 바 -->
+  <div class="manage-bar" id="manageBar" style="display:none">
+    <span id="manageCount">0개 선택됨</span>
+    <div style="flex:1"></div>
+    <button class="mb-move" data-move="subculture">→ 서브컬쳐로</button>
+    <button class="mb-move" data-move="abyss">→ 심연으로</button>
+    <button class="mb-cancel" id="manageCancel">취소</button>
   </div>
 
   <div class="gallery" id="gallery">
@@ -126,6 +168,13 @@
   <div class="up-modal" id="upModal">
     <div class="up-box">
       <h2>추가하기</h2>
+      <div class="up-channel">
+        <span class="uc-label">어디에 올릴까요?</span>
+        <div class="uc-options">
+          <button class="uc-opt active" data-upchannel="subculture">🎨 서브컬쳐</button>
+          <button class="uc-opt" data-upchannel="abyss">🕳️ 심연</button>
+        </div>
+      </div>
       <div class="up-tabs">
         <button class="up-tab active" data-uptab="image">🖼️ 이미지</button>
         <button class="up-tab" data-uptab="vod">▶ VOD·클립</button>
@@ -178,6 +227,10 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let isAdmin = false;
 let currentSort = 'recent'; // 'recent' | 'likes'
+let currentChannel = 'subculture'; // 'subculture' | 'abyss'
+let uploadChannel = 'subculture'; // 업로드 대상 채널
+let manageMode = false;
+let selectedIds = new Set();
 let itemsCache = [];        // 추천수 포함 아이템 캐시
 
 const galleryEl = document.getElementById('gallery');
@@ -201,14 +254,13 @@ function setMyLike(itemId, liked){
 
 // ── 갤러리 로드 ────────────────────────────────────────────
 async function loadGallery(){
-  // 이미지 + 추천수 동시 로드
+  // 현재 채널의 이미지 + 추천수 동시 로드
   const [itemsRes, likesRes] = await Promise.all([
-    sb.from('archive_items').select('*'),
+    sb.from('archive_items').select('*').eq('channel', currentChannel),
     sb.from('archive_likes').select('item_id')
   ]);
   const items = itemsRes.data || [];
   const likes = likesRes.data || [];
-  // 추천수 집계
   const likeCount = {};
   likes.forEach(function(l){ likeCount[l.item_id] = (likeCount[l.item_id] || 0) + 1; });
   itemsCache = items.map(function(it){ return Object.assign({}, it, { likes: likeCount[it.id] || 0 }); });
@@ -217,7 +269,8 @@ async function loadGallery(){
 
 function renderGallery(){
   if(!itemsCache.length){
-    galleryEl.innerHTML = '<div class="empty">아직 업로드된 이미지가 없어요.</div>';
+    const label = currentChannel === 'abyss' ? '심연' : '서브컬쳐';
+    galleryEl.innerHTML = '<div class="empty">' + label + '에 아직 아무것도 없어요.</div>';
     return;
   }
   // 정렬
@@ -230,28 +283,31 @@ function renderGallery(){
   });
   galleryEl.innerHTML = sorted.map(function(it){
     const isVod = it.kind === 'vod';
+    const selCls = selectedIds.has(it.id) ? ' selected' : '';
+    const selectableCls = manageMode ? ' selectable' : '';
+    const selCheck = '<span class="sel-check">' + (selectedIds.has(it.id) ? '✓' : '') + '</span>';
     if(isVod){
-      // VOD 카드: 외부 썸네일 + 재생 아이콘, 클릭 시 모달에서 재생
       const thumb = it.thumb_url || '';
-      // title_no 추출해서 embed URL 구성
       const tnMatch = (it.vod_url || '').match(/(\d{6,})/);
       const embedUrl = tnMatch ? 'https://vod.sooplive.com/player/' + tnMatch[1] + '/embed?autoPlay=true&showChat=false&mutePlay=false' : '';
-      return '<div class="card card-vod" data-id="' + it.id + '" data-vodurl="' + (it.vod_url||'') + '">' +
+      return '<div class="card card-vod' + selCls + selectableCls + '" data-id="' + it.id + '" data-vodurl="' + (it.vod_url||'') + '">' +
         '<img src="' + thumb + '" loading="lazy" alt="" data-vodplay="' + embedUrl + '" data-voditem="' + it.id + '" onerror="this.style.background=\'#ddd\'" />' +
         '<span class="type-tag vod-tag">▶ VOD</span>' +
         '<span class="play-icon">▶</span>' +
         (it.vod_title ? '<span class="vod-caption">' + it.vod_title + '</span>' : '') +
         (it.likes > 0 ? '<span class="like-badge">👍 ' + it.likes + '</span>' : '') +
+        selCheck +
         '<button class="del-btn" data-del="' + it.id + '">✕</button>' +
       '</div>';
     }
     const thumb = it.thumb_key ? fileUrl(it.thumb_key) : fileUrl(it.file_key);
     const orig = fileUrl(it.file_key);
     const ext = (it.file_type || '').split('/')[1] || '';
-    return '<div class="card" data-id="' + it.id + '" data-orig="' + orig + '" data-filekey="' + it.file_key + '" data-thumbkey="' + (it.thumb_key||'') + '">' +
+    return '<div class="card' + selCls + selectableCls + '" data-id="' + it.id + '" data-orig="' + orig + '" data-filekey="' + it.file_key + '" data-thumbkey="' + (it.thumb_key||'') + '">' +
       '<img src="' + thumb + '" loading="lazy" alt="" data-open="' + orig + '" data-openid="' + it.id + '" />' +
       (ext ? '<span class="type-tag">' + ext + '</span>' : '') +
       (it.likes > 0 ? '<span class="like-badge">👍 ' + it.likes + '</span>' : '') +
+      selCheck +
       '<button class="del-btn" data-del="' + it.id + '">✕</button>' +
     '</div>';
   }).join('');
@@ -266,6 +322,68 @@ document.querySelector('.sort-tabs').addEventListener('click', function(e){
   renderGallery();
 });
 
+// 채널 탭 전환
+document.getElementById('channelTabs').addEventListener('click', function(e){
+  const tab = e.target.closest('[data-channel]');
+  if(!tab) return;
+  currentChannel = tab.dataset.channel;
+  document.querySelectorAll('.channel-tab').forEach(function(t){ t.classList.toggle('active', t === tab); });
+  exitManageMode();
+  loadGallery();
+});
+
+// ── 관리 모드 (선택 이동, 어드민) ──────────────────────────
+const manageBtn = document.getElementById('manageBtn');
+const manageBar = document.getElementById('manageBar');
+manageBtn.addEventListener('click', function(){
+  if(manageMode) exitManageMode(); else enterManageMode();
+});
+function enterManageMode(){
+  manageMode = true;
+  selectedIds.clear();
+  document.body.classList.add('manage-mode');
+  manageBtn.classList.add('active');
+  manageBar.style.display = 'flex';
+  updateManageCount();
+  renderGallery();
+}
+function exitManageMode(){
+  manageMode = false;
+  selectedIds.clear();
+  document.body.classList.remove('manage-mode');
+  manageBtn.classList.remove('active');
+  manageBar.style.display = 'none';
+  renderGallery();
+}
+document.getElementById('manageCancel').addEventListener('click', exitManageMode);
+function updateManageCount(){
+  document.getElementById('manageCount').textContent = selectedIds.size + '개 선택됨';
+}
+
+// 선택 이동 실행
+manageBar.addEventListener('click', async function(e){
+  const mv = e.target.closest('[data-move]');
+  if(!mv) return;
+  if(!selectedIds.size){ alert('이동할 항목을 선택해주세요.'); return; }
+  const target = mv.dataset.move;
+  if(target === currentChannel){ alert('이미 같은 채널이에요.'); return; }
+  const label = target === 'abyss' ? '심연' : '서브컬쳐';
+  if(!confirm(selectedIds.size + '개를 ' + label + '(으)로 이동할까요?')) return;
+  const ids = Array.from(selectedIds);
+  const res = await sb.from('archive_items').update({ channel: target }).in('id', ids);
+  if(res.error){ alert('이동 실패: ' + res.error.message); return; }
+  exitManageMode();
+  await loadGallery();
+});
+
+// ── 업로드 채널 선택 ───────────────────────────────────────
+document.querySelector('.up-channel').addEventListener('click', function(e){
+  const opt = e.target.closest('[data-upchannel]');
+  if(!opt) return;
+  uploadChannel = opt.dataset.upchannel;
+  document.querySelectorAll('.uc-opt').forEach(function(o){ o.classList.toggle('active', o === opt); });
+});
+
 // ── 라이트박스 (원본/애니메이션 보기 + 추천) ───────────────
 const lightbox = document.getElementById('lightbox');
 const lbImg = document.getElementById('lbImg');
@@ -274,6 +392,18 @@ const lbCount = document.getElementById('lbCount');
 let lbItemId = null;
 
 galleryEl.addEventListener('click', function(e){
+  // 관리 모드: 카드 클릭 = 선택 토글
+  if(manageMode){
+    const card = e.target.closest('.card');
+    if(!card) return;
+    const id = card.dataset.id;
+    if(selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+    card.classList.toggle('selected', selectedIds.has(id));
+    const chk = card.querySelector('.sel-check');
+    if(chk) chk.textContent = selectedIds.has(id) ? '✓' : '';
+    updateManageCount();
+    return;
+  }
   const img = e.target.closest('[data-open]');
   const vod = e.target.closest('[data-vodplay]');
   const del = e.target.closest('[data-del]');
@@ -440,7 +570,8 @@ document.getElementById('vodAdd').addEventListener('click', async function(){
       vod_title: vodData.title,
       thumb_url: vodData.thumb,
       file_key: 'vod:' + vodData.titleNo,  // NOT NULL 제약 대응 (VOD는 실제 R2 파일 없음)
-      file_type: 'video/vod'
+      file_type: 'video/vod',
+      channel: uploadChannel
     });
     if(ins.error){ throw new Error(ins.error.message); }
     prog.textContent = '완료!';
@@ -563,7 +694,8 @@ document.getElementById('upDo').addEventListener('click', async function(){
       const ins = await sb.from('archive_items').insert({
         file_key: data.fileKey,
         thumb_key: data.thumbKey || null,
-        file_type: data.fileType
+        file_type: data.fileType,
+        channel: uploadChannel
       });
       if(ins.error){ throw new Error(ins.error.message); }
       item.status = 'done'; ok++;
@@ -589,6 +721,7 @@ async function checkAdmin(){
   isAdmin = !!session;
   document.body.classList.toggle('is-admin', isAdmin);
   document.getElementById('loginStatus').style.display = isAdmin ? '' : 'none';
+  document.getElementById('manageBtn').style.display = isAdmin ? '' : 'none';
 }
 
 // ── 초기화 ─────────────────────────────────────────────────
