@@ -94,6 +94,39 @@
   .tab-viewer:hover{ background:#ffe9dc; }
   .tab-coord{ color:#2563eb; border-color:#bcd0f5; background:#eff5ff; }
   .tab-coord:hover{ background:#e0ebff; }
+  .tab-up{ color:#0891b2; border-color:#a5e0ec; background:#ecfbff; }
+  .tab-up:hover{ background:#d5f4fb; }
+  .up-add-btn{ background:#0891b2; color:#fff; border:none; border-radius:12px; padding:11px 20px; font-family:'A2z',sans-serif; font-weight:700; font-size:14px; cursor:pointer; }
+  .up-field{ display:block; margin-bottom:12px; }
+  .up-field span{ display:block; font-size:12.5px; color:var(--ink); margin-bottom:5px; }
+  .up-field b{ color:#c0392b; }
+  .up-field input{ width:100%; height:40px; border:1px solid var(--line); border-radius:10px; padding:0 12px; font-size:13.5px; font-family:inherit; box-sizing:border-box; }
+  .upf-cancel,.upf-submit{ flex:1; padding:12px; border:none; border-radius:10px; font-family:'A2z',sans-serif; font-weight:700; font-size:14px; cursor:pointer; }
+  .upf-cancel{ background:#f2ece3; color:var(--ink-soft); }
+  .upf-submit{ background:#0891b2; color:#fff; }
+  /* 업 요청 행 */
+  .up-row{ display:flex; align-items:center; gap:12px; padding:14px 16px; border:1px solid var(--line); border-radius:12px; background:var(--card); margin-bottom:8px; }
+  .up-row.expired{ opacity:0.5; }
+  .up-row .up-dday{ flex:none; min-width:54px; text-align:center; font-weight:800; font-size:15px; color:#0891b2; }
+  .up-row .up-dday.soon{ color:#e0322a; }
+  .up-row .up-info{ flex:1; min-width:0; }
+  .up-row .up-nick{ font-weight:700; font-size:15px; color:var(--ink); }
+  .up-row .up-goal{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
+  .up-row .up-actions{ flex:none; display:flex; gap:6px; }
+  .up-row .up-btn{ border:none; border-radius:9px; padding:8px 12px; font-family:'A2z',sans-serif; font-weight:700; font-size:12.5px; cursor:pointer; }
+  .up-btn-rank{ background:#ecfbff; color:#0891b2; }
+  .up-btn-go{ background:#f2ece3; color:var(--ink); text-decoration:none; display:inline-flex; align-items:center; }
+  .up-btn-del{ background:#fdecea; color:#c0392b; }
+  /* UP 순위 행 */
+  .rank-row{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-bottom:1px solid var(--line); text-decoration:none; }
+  .rank-row:hover{ background:#f9f5f0; }
+  .rank-row .rk-num{ flex:none; width:32px; text-align:center; font-weight:800; font-size:15px; color:var(--ink-soft); }
+  .rank-row .rk-num.top{ color:#e0322a; }
+  .rank-row .rk-info{ flex:1; min-width:0; }
+  .rank-row .rk-nick{ font-weight:700; font-size:13.5px; color:var(--ink); }
+  .rank-row .rk-nick .rk-best{ font-size:10px; color:#fff; background:#e0322a; border-radius:4px; padding:1px 5px; margin-left:5px; }
+  .rank-row .rk-comment{ font-size:11.5px; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
+  .rank-row .rk-up{ flex:none; font-weight:800; font-size:14px; color:#0891b2; }
   .tab-archive{ color:#7c3aed; border-color:#d4c5f0; background:#f6f0ff; }
   .tab-archive:hover{ background:#ede0ff; }
   .coord-live-badge.off{ background:#b5ada3 !important; }
@@ -253,6 +286,7 @@
   <nav class="tabs">
     <button class="tab-link active" data-target="panelCal">일정</button>
     <button class="tab-link" data-target="panelSched">방송 시간표</button>
+    <button class="tab-link tab-up" data-target="panelUp">🔼 업</button>
     <a class="tab-link tab-viewer" href="/viewer/" target="_blank" rel="noopener">📺 뷰어</a>
     <button class="tab-link tab-coord" id="coordBtn">📍 좌표추천</button>
     <a class="tab-link tab-archive" href="/archive/" target="_blank" rel="noopener">📁 아카이브</a>
@@ -292,6 +326,59 @@
         </thead>
         <tbody id="weekBody"><tr><td colspan="8" class="loading">불러오는 중…</td></tr></tbody>
       </table>
+    </div>
+  </div>
+
+  <div id="panelUp" class="panel">
+    <div class="section-title">
+      <h2>업 요청</h2>
+      <span class="sub">게시글 UP 순위 · 마감</span>
+    </div>
+    <div style="margin-bottom:16px">
+      <button class="up-add-btn" id="upAddBtn">＋ 업 요청 등록</button>
+    </div>
+    <div class="month-block">
+      <div id="upListBody"><div class="loading" style="padding:30px 0;text-align:center;color:#b5ada3">불러오는 중…</div></div>
+    </div>
+  </div>
+
+  <!-- 업 요청 등록 모달 -->
+  <div id="upFormModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:16px">
+    <div style="background:#fff;border-radius:18px;max-width:420px;width:100%;padding:24px">
+      <h2 style="font-size:18px;font-weight:800;margin:0 0 16px">업 요청 등록</h2>
+      <label class="up-field">
+        <span>게시글 URL <b>*</b></span>
+        <input type="text" id="upfUrl" placeholder="https://www.sooplive.com/station/.../post/..." />
+      </label>
+      <label class="up-field">
+        <span>대상 스트리머 닉네임 <b>*</b></span>
+        <input type="text" id="upfNick" placeholder="예: 망개" />
+      </label>
+      <label class="up-field">
+        <span>목표 <span style="color:#b5ada3">(선택)</span></span>
+        <input type="text" id="upfGoal" placeholder="예: UP 30등 안 들기" />
+      </label>
+      <label class="up-field">
+        <span>마감일 <span style="color:#b5ada3">(선택)</span></span>
+        <input type="date" id="upfDeadline" />
+      </label>
+      <div style="display:flex;gap:8px;margin-top:18px">
+        <button class="upf-cancel" id="upfCancel">취소</button>
+        <button class="upf-submit" id="upfSubmit">등록</button>
+      </div>
+      <div id="upfMsg" style="font-size:12px;color:#c0392b;text-align:center;margin-top:8px;min-height:14px"></div>
+    </div>
+  </div>
+
+  <!-- UP 순위 모달 -->
+  <div id="upRankModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;align-items:center;justify-content:center;padding:16px">
+    <div style="background:#fff;border-radius:18px;max-width:520px;width:100%;max-height:80vh;display:flex;flex-direction:column;padding:22px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <h2 id="upRankTitle" style="font-size:17px;font-weight:800;margin:0">UP 순위</h2>
+        <button id="upRankClose" style="border:none;background:none;font-size:20px;cursor:pointer;color:#999">✕</button>
+      </div>
+      <div id="upRankSub" style="font-size:12px;color:#b5ada3;margin-bottom:14px"></div>
+      <div id="upRankBody" style="overflow-y:auto;flex:1"><div class="loading" style="text-align:center;padding:30px 0;color:#b5ada3">불러오는 중…</div></div>
     </div>
   </div>
 
@@ -628,6 +715,157 @@ tabLinks.forEach(btn => {
 
   // 설치 완료되면 버튼 숨김
   window.addEventListener('appinstalled', function(){ bar.style.display = 'none'; modal.style.display = 'none'; });
+})();
+
+// ── 업 요청 ────────────────────────────────────────────────
+(function(){
+  const sb = initSupabase();
+  const listBody = document.getElementById('upListBody');
+
+  function parsePostUrl(url){
+    const m = (url||'').match(/station\/([^\/]+)\/post\/(\d+)/);
+    return m ? { bj: m[1], post: m[2] } : null;
+  }
+  function ddayText(deadline){
+    if(!deadline) return { text:'상시', cls:'' };
+    const now = new Date(); const nowMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const [y,mo,d] = deadline.split('-').map(Number);
+    const dl = new Date(y, mo-1, d);
+    const diff = Math.round((dl - nowMid) / 86400000);
+    if(diff < 0) return { text:'마감', cls:'expired' };
+    if(diff === 0) return { text:'D-day', cls:'soon' };
+    return { text:'D-'+diff, cls: diff <= 3 ? 'soon' : '' };
+  }
+
+  async function loadUpRequests(){
+    const res = await sb.from('up_requests').select('*').order('deadline', { ascending: true, nullsFirst: false });
+    const rows = res.data || [];
+    if(!rows.length){
+      listBody.innerHTML = '<div style="text-align:center;color:#b5ada3;font-size:13px;padding:30px 0">등록된 업 요청이 없어요.</div>';
+      return;
+    }
+    listBody.innerHTML = rows.map(function(r){
+      const dd = ddayText(r.deadline);
+      const isExpired = dd.cls === 'expired';
+      const goalPart = r.goal ? '<div class="up-goal">🎯 ' + esc(r.goal) + '</div>' : '';
+      const deadlinePart = r.deadline ? ' · ' + r.deadline : '';
+      return '<div class="up-row ' + (isExpired?'expired':'') + '">' +
+        '<div class="up-dday ' + dd.cls + '">' + dd.text + '</div>' +
+        '<div class="up-info">' +
+          '<div class="up-nick">' + esc(r.streamer_nick) + '</div>' +
+          '<div class="up-goal">' + (r.goal ? '🎯 ' + esc(r.goal) : '업 요청') + deadlinePart + '</div>' +
+        '</div>' +
+        '<div class="up-actions">' +
+          '<button class="up-btn up-btn-rank" data-rank="' + r.id + '" data-bj="' + (r.bj_id||'') + '" data-post="' + (r.post_no||'') + '" data-nick="' + esc(r.streamer_nick).replace(/"/g,'') + '">📊 순위</button>' +
+          '<a class="up-btn up-btn-go" href="' + esc(r.post_url) + '" target="_blank" rel="noopener">바로가기</a>' +
+          '<button class="up-btn up-btn-del admin-only" data-del="' + r.id + '" style="display:none">삭제</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    applyAdminVisibility();
+  }
+
+  function esc(s){ return (s||'').replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  // 어드민이면 삭제 버튼 노출
+  let isUpAdmin = false;
+  async function applyAdminVisibility(){
+    const { data:{ session } } = await sb.auth.getSession();
+    isUpAdmin = !!session;
+    document.querySelectorAll('#panelUp .admin-only').forEach(function(el){ el.style.display = isUpAdmin ? '' : 'none'; });
+  }
+
+  // 순위 조회
+  listBody.addEventListener('click', async function(e){
+    const rankBtn = e.target.closest('[data-rank]');
+    const delBtn = e.target.closest('[data-del]');
+    if(delBtn){
+      if(!confirm('이 업 요청을 삭제할까요?')) return;
+      const res = await sb.from('up_requests').delete().eq('id', delBtn.dataset.del);
+      if(res.error){ alert('삭제 실패: ' + res.error.message); return; }
+      loadUpRequests();
+      return;
+    }
+    if(rankBtn){
+      openRankModal(rankBtn.dataset.bj, rankBtn.dataset.post, rankBtn.dataset.nick);
+    }
+  });
+
+  async function openRankModal(bj, post, nick){
+    const modal = document.getElementById('upRankModal');
+    const body = document.getElementById('upRankBody');
+    document.getElementById('upRankTitle').textContent = nick + ' — UP 순위';
+    document.getElementById('upRankSub').textContent = '';
+    body.innerHTML = '<div class="loading" style="text-align:center;padding:30px 0;color:#b5ada3">불러오는 중…</div>';
+    modal.style.display = 'flex';
+    if(!bj || !post){ body.innerHTML = '<div style="text-align:center;color:#c0392b;padding:20px">게시글 정보가 없어요.</div>'; return; }
+    try{
+      const res = await fetch('/api/soop-comments?bj=' + encodeURIComponent(bj) + '&post=' + encodeURIComponent(post));
+      const d = await res.json();
+      if(!d.ok || !d.comments){ throw new Error('불러오기 실패'); }
+      document.getElementById('upRankSub').textContent = '총 ' + d.total + '개 댓글 · UP 순';
+      if(!d.comments.length){ body.innerHTML = '<div style="text-align:center;color:#b5ada3;padding:20px">댓글이 없어요.</div>'; return; }
+      const postUrl = 'https://www.sooplive.com/station/' + bj + '/post/' + post;
+      body.innerHTML = d.comments.map(function(c){
+        const topCls = c.rank <= 3 ? 'top' : '';
+        const bestBadge = c.isBest ? '<span class="rk-best">BEST</span>' : '';
+        return '<a class="rank-row" href="' + postUrl + '#comment' + c.commentNo + '" target="_blank" rel="noopener">' +
+          '<div class="rk-num ' + topCls + '">' + c.rank + '</div>' +
+          '<div class="rk-info">' +
+            '<div class="rk-nick">' + esc(c.nick) + bestBadge + '</div>' +
+            '<div class="rk-comment">' + esc(c.comment) + '</div>' +
+          '</div>' +
+          '<div class="rk-up">👍 ' + c.likeCnt + '</div>' +
+        '</a>';
+      }).join('');
+    }catch(err){
+      body.innerHTML = '<div style="text-align:center;color:#c0392b;padding:20px">순위를 불러오지 못했어요.<br><span style="font-size:11px;color:#b5ada3">' + err.message + '</span></div>';
+    }
+  }
+  document.getElementById('upRankClose').addEventListener('click', function(){ document.getElementById('upRankModal').style.display = 'none'; });
+  document.getElementById('upRankModal').addEventListener('click', function(e){ if(e.target === this) this.style.display = 'none'; });
+
+  // 등록 폼
+  const formModal = document.getElementById('upFormModal');
+  document.getElementById('upAddBtn').addEventListener('click', function(){
+    document.getElementById('upfUrl').value = '';
+    document.getElementById('upfNick').value = '';
+    document.getElementById('upfGoal').value = '';
+    document.getElementById('upfDeadline').value = '';
+    document.getElementById('upfMsg').textContent = '';
+    formModal.style.display = 'flex';
+  });
+  document.getElementById('upfCancel').addEventListener('click', function(){ formModal.style.display = 'none'; });
+  formModal.addEventListener('click', function(e){ if(e.target === formModal) formModal.style.display = 'none'; });
+
+  document.getElementById('upfSubmit').addEventListener('click', async function(){
+    const url = document.getElementById('upfUrl').value.trim();
+    const nick = document.getElementById('upfNick').value.trim();
+    const goal = document.getElementById('upfGoal').value.trim();
+    const deadline = document.getElementById('upfDeadline').value;
+    const msg = document.getElementById('upfMsg');
+    if(!url || !nick){ msg.textContent = '게시글 URL과 스트리머 닉네임은 필수예요.'; return; }
+    const parsed = parsePostUrl(url);
+    if(!parsed){ msg.textContent = 'SOOP 게시글 URL 형식이 아니에요.'; return; }
+    msg.textContent = '';
+    const res = await sb.from('up_requests').insert({
+      post_url: url,
+      bj_id: parsed.bj,
+      post_no: parsed.post,
+      streamer_nick: nick,
+      goal: goal || null,
+      deadline: deadline || null
+    });
+    if(res.error){ msg.textContent = '등록 실패: ' + res.error.message; return; }
+    formModal.style.display = 'none';
+    loadUpRequests();
+  });
+
+  // 탭 열릴 때 로드 (탭 전환 감지)
+  document.querySelector('.tabs').addEventListener('click', function(e){
+    const tab = e.target.closest('[data-target="panelUp"]');
+    if(tab) loadUpRequests();
+  });
 })();
 
 // ── 좌표 추천 ──────────────────────────────────────────────

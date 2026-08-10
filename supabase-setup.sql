@@ -223,3 +223,25 @@ create index if not exists idx_archive_channel on public.archive_items (channel,
 -- 15) 아카이브 채널 이동을 위한 update 정책 (인증된 관리자만)
 drop policy if exists "auth update archive" on public.archive_items;
 create policy "auth update archive" on public.archive_items for update using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
+-- 16) 업 요청 게시판 (누구나 등록, 게시글 UP 순위 조회)
+create table if not exists public.up_requests (
+  id uuid primary key default gen_random_uuid(),
+  post_url text not null,          -- SOOP 게시글 URL
+  bj_id text,                      -- 추출된 BJ 아이디
+  post_no text,                    -- 추출된 게시글 번호
+  streamer_nick text not null,     -- 대상 스트리머 닉네임
+  goal text,                       -- 목표 (예: "UP 30등 안")
+  deadline date,                   -- 마감일
+  created_at timestamptz not null default now()
+);
+alter table public.up_requests enable row level security;
+drop policy if exists "public read up_requests" on public.up_requests;
+drop policy if exists "public insert up_requests" on public.up_requests;
+drop policy if exists "public delete up_requests" on public.up_requests;
+drop policy if exists "auth delete up_requests" on public.up_requests;
+create policy "public read up_requests" on public.up_requests for select using (true);
+create policy "public insert up_requests" on public.up_requests for insert with check (true);
+-- 삭제는 인증(어드민)만
+create policy "auth delete up_requests" on public.up_requests for delete using (auth.role() = 'authenticated');
+create index if not exists idx_up_requests_deadline on public.up_requests (deadline);
