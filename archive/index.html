@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>아카이브 갤러리</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @font-face { font-family:'A2z'; src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/에이투지체-4Regular.woff2') format('woff2'); font-weight:400; font-display:swap; }
+  @font-face { font-family:'A2z'; src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/에이투지체-7Bold.woff2') format('woff2'); font-weight:700; font-display:swap; }
+  @font-face { font-family:'A2z'; src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/에이투지체-8ExtraBold.woff2') format('woff2'); font-weight:800; font-display:swap; }
+  :root{ --paper:#fbf7f2; --ink:#2c2622; --ink-soft:#7d7168; --line:#e8e0d6; --card:#ffffff; --accent:#c2410c; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:var(--paper); color:var(--ink); font-family:'A2z',sans-serif; }
+  body{ max-width:1100px; margin:0 auto; padding:28px 18px 80px; }
+
+  .top{ display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+  .top h1{ font-size:28px; font-weight:800; margin:0; }
+  .top a.back{ font-size:13px; color:var(--ink-soft); text-decoration:none; border:1px solid var(--line); background:var(--card); border-radius:16px; padding:7px 14px; }
+  .sub{ font-size:13px; color:var(--ink-soft); margin-bottom:20px; }
+
+  .toolbar{ display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
+  .btn-upload{ background:var(--accent); color:#fff; border:none; border-radius:12px; padding:11px 20px; font-family:'A2z',sans-serif; font-weight:700; font-size:14px; cursor:pointer; }
+  .admin-badge{ font-size:11.5px; color:#16a34a; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:14px; padding:5px 11px; }
+
+  .gallery{ display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:12px; }
+  .card{ position:relative; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--card); aspect-ratio:1/1; }
+  .card img{ width:100%; height:100%; object-fit:cover; display:block; cursor:pointer; background:#f0ece6; }
+  .card .type-tag{ position:absolute; top:6px; left:6px; font-size:9.5px; font-weight:700; color:#fff; background:rgba(0,0,0,.6); border-radius:5px; padding:2px 6px; text-transform:uppercase; }
+  .card .del-btn{ position:absolute; top:6px; right:6px; width:26px; height:26px; border:none; border-radius:50%; background:rgba(196,32,32,.9); color:#fff; cursor:pointer; font-size:13px; display:none; align-items:center; justify-content:center; }
+  body.is-admin .card .del-btn{ display:flex; }
+
+  .empty{ text-align:center; color:#b5ada3; font-size:14px; padding:60px 0; grid-column:1/-1; }
+  .loading{ text-align:center; color:var(--ink-soft); font-size:14px; padding:40px 0; grid-column:1/-1; }
+
+  /* 라이트박스 (원본 보기, 애니메이션 재생) */
+  .lightbox{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.9); z-index:100; align-items:center; justify-content:center; padding:20px; }
+  .lightbox.open{ display:flex; }
+  .lightbox img{ max-width:100%; max-height:100%; object-fit:contain; border-radius:8px; }
+  .lightbox .close{ position:absolute; top:16px; right:20px; width:40px; height:40px; border:none; border-radius:50%; background:rgba(255,255,255,.15); color:#fff; font-size:20px; cursor:pointer; }
+
+  /* 업로드 모달 */
+  .up-modal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:120; align-items:center; justify-content:center; padding:16px; }
+  .up-modal.open{ display:flex; }
+  .up-box{ background:#fff; border-radius:18px; max-width:420px; width:100%; padding:24px; }
+  .up-box h2{ font-size:18px; font-weight:800; margin:0 0 6px; }
+  .up-box .hint{ font-size:12px; color:var(--ink-soft); margin-bottom:16px; line-height:1.5; }
+  .drop{ border:2px dashed var(--line); border-radius:12px; padding:28px 16px; text-align:center; color:var(--ink-soft); font-size:13px; cursor:pointer; margin-bottom:12px; }
+  .drop.drag{ border-color:var(--accent); background:#fff8f4; }
+  .preview-row{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .preview-row img{ width:54px; height:54px; object-fit:cover; border-radius:8px; border:1px solid var(--line); }
+  .preview-row .fname{ font-size:12px; color:var(--ink); word-break:break-all; }
+  .up-actions{ display:flex; gap:8px; }
+  .up-actions button{ flex:1; padding:11px; border:none; border-radius:10px; font-family:'A2z',sans-serif; font-weight:700; font-size:13px; cursor:pointer; }
+  .up-do{ background:var(--accent); color:#fff; }
+  .up-cancel{ background:#f2ece3; color:var(--ink-soft); }
+  .up-progress{ font-size:12px; color:var(--accent); text-align:center; margin-top:8px; min-height:16px; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <h1>📁 아카이브</h1>
+    <a class="back" href="/">← 캘린더</a>
+  </div>
+  <div class="sub">누구나 이미지를 업로드할 수 있어요. (webp · gif · png)</div>
+
+  <div class="toolbar">
+    <button class="btn-upload" id="uploadBtn">＋ 업로드</button>
+    <span class="admin-badge" id="adminBadge" style="display:none">🔑 관리자 · 삭제 가능</span>
+  </div>
+
+  <div class="gallery" id="gallery">
+    <div class="loading">불러오는 중…</div>
+  </div>
+
+  <!-- 라이트박스 -->
+  <div class="lightbox" id="lightbox">
+    <button class="close" id="lbClose">✕</button>
+    <img id="lbImg" src="" alt="" />
+  </div>
+
+  <!-- 업로드 모달 -->
+  <div class="up-modal" id="upModal">
+    <div class="up-box">
+      <h2>이미지 업로드</h2>
+      <div class="hint">webp · gif · png (최대 25MB). 움직이는 이미지는 정지 썸네일이 자동 생성돼요.</div>
+      <div class="drop" id="dropZone">
+        클릭하거나 파일을 여기로 끌어다 놓으세요
+        <input type="file" id="fileInput" accept="image/webp,image/gif,image/png" style="display:none" />
+      </div>
+      <div class="preview-row" id="previewRow" style="display:none">
+        <img id="previewImg" src="" alt="" />
+        <div class="fname" id="previewName"></div>
+      </div>
+      <div class="up-actions">
+        <button class="up-cancel" id="upCancel">취소</button>
+        <button class="up-do" id="upDo" disabled>업로드</button>
+      </div>
+      <div class="up-progress" id="upProgress"></div>
+    </div>
+  </div>
+
+<script>
+const SUPABASE_URL = 'https://fwlkyyvrkunqqtyttilp.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3bGt5eXZya3VucXF0eXR0aWxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2MTIyODcsImV4cCI6MjEwMDE4ODI4N30.bFTQVch4TYCxXAWvtTcWdLA4B4HeyAeepqLjZ2daJWI';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let isAdmin = false;
+let selectedFile = null;
+let selectedThumbBlob = null;
+
+const galleryEl = document.getElementById('gallery');
+const fileUrl = function(key){ return '/api/r2/file?key=' + encodeURIComponent(key); };
+
+// ── 갤러리 로드 ────────────────────────────────────────────
+async function loadGallery(){
+  const res = await sb.from('archive_items').select('*').order('created_at', { ascending: false });
+  const items = res.data || [];
+  if(!items.length){
+    galleryEl.innerHTML = '<div class="empty">아직 업로드된 이미지가 없어요.</div>';
+    return;
+  }
+  galleryEl.innerHTML = items.map(function(it){
+    const thumb = it.thumb_key ? fileUrl(it.thumb_key) : fileUrl(it.file_key);
+    const orig = fileUrl(it.file_key);
+    const ext = (it.file_type || '').split('/')[1] || '';
+    return '<div class="card" data-id="' + it.id + '" data-orig="' + orig + '" data-filekey="' + it.file_key + '" data-thumbkey="' + (it.thumb_key||'') + '">' +
+      '<img src="' + thumb + '" loading="lazy" alt="" data-open="' + orig + '" />' +
+      (ext ? '<span class="type-tag">' + ext + '</span>' : '') +
+      '<button class="del-btn" data-del="' + it.id + '">✕</button>' +
+    '</div>';
+  }).join('');
+}
+
+// ── 라이트박스 (원본/애니메이션 보기) ──────────────────────
+const lightbox = document.getElementById('lightbox');
+const lbImg = document.getElementById('lbImg');
+galleryEl.addEventListener('click', function(e){
+  const img = e.target.closest('[data-open]');
+  const del = e.target.closest('[data-del]');
+  if(del){ e.stopPropagation(); handleDelete(del.dataset.del); return; }
+  if(img){ lbImg.src = img.dataset.open; lightbox.classList.add('open'); }
+});
+document.getElementById('lbClose').addEventListener('click', function(){ lightbox.classList.remove('open'); lbImg.src=''; });
+lightbox.addEventListener('click', function(e){ if(e.target === lightbox){ lightbox.classList.remove('open'); lbImg.src=''; } });
+
+// ── 삭제 (어드민) ──────────────────────────────────────────
+async function handleDelete(id){
+  if(!isAdmin) return;
+  if(!confirm('이 이미지를 삭제할까요?')) return;
+  const card = galleryEl.querySelector('[data-id="' + id + '"]');
+  const fileKey = card ? card.dataset.filekey : null;
+  const thumbKey = card ? card.dataset.thumbkey : null;
+  // 1) R2에서 파일 삭제 (세션 토큰 전달)
+  const { data:{ session } } = await sb.auth.getSession();
+  const token = session ? session.access_token : '';
+  try{
+    await fetch('/api/r2/delete', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token },
+      body: JSON.stringify({ fileKey: fileKey, thumbKey: thumbKey || null })
+    });
+  }catch(e){}
+  // 2) DB 행 삭제
+  const res = await sb.from('archive_items').delete().eq('id', id);
+  if(res.error){ alert('삭제 실패: ' + res.error.message); return; }
+  await loadGallery();
+}
+
+// ── 업로드 ─────────────────────────────────────────────────
+const upModal = document.getElementById('upModal');
+const fileInput = document.getElementById('fileInput');
+const dropZone = document.getElementById('dropZone');
+
+document.getElementById('uploadBtn').addEventListener('click', function(){ resetUpload(); upModal.classList.add('open'); });
+document.getElementById('upCancel').addEventListener('click', function(){ upModal.classList.remove('open'); });
+upModal.addEventListener('click', function(e){ if(e.target === upModal) upModal.classList.remove('open'); });
+dropZone.addEventListener('click', function(){ fileInput.click(); });
+fileInput.addEventListener('change', function(){ if(fileInput.files[0]) handleFile(fileInput.files[0]); });
+dropZone.addEventListener('dragover', function(e){ e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', function(){ dropZone.classList.remove('drag'); });
+dropZone.addEventListener('drop', function(e){ e.preventDefault(); dropZone.classList.remove('drag'); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+
+function resetUpload(){
+  selectedFile = null; selectedThumbBlob = null;
+  document.getElementById('previewRow').style.display = 'none';
+  document.getElementById('upDo').disabled = true;
+  document.getElementById('upProgress').textContent = '';
+  fileInput.value = '';
+}
+
+const ALLOWED = ['image/webp','image/gif','image/png'];
+async function handleFile(file){
+  if(!ALLOWED.includes(file.type)){ alert('webp, gif, png만 업로드할 수 있어요.'); return; }
+  if(file.size > 25*1024*1024){ alert('파일이 너무 커요 (최대 25MB).'); return; }
+  selectedFile = file;
+  // 미리보기 + 정지 썸네일 생성
+  const url = URL.createObjectURL(file);
+  document.getElementById('previewImg').src = url;
+  document.getElementById('previewName').textContent = file.name;
+  document.getElementById('previewRow').style.display = 'flex';
+  document.getElementById('upDo').disabled = false;
+  // 정지 썸네일 생성 (첫 프레임 → png)
+  selectedThumbBlob = await makeThumb(file).catch(function(){ return null; });
+}
+
+// 이미지 첫 프레임을 canvas로 그려 정지 png 썸네일 생성
+function makeThumb(file){
+  return new Promise(function(resolve, reject){
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = function(){
+      const MAX = 400; // 썸네일 최대 변
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if(w > h && w > MAX){ h = Math.round(h * MAX / w); w = MAX; }
+      else if(h >= w && h > MAX){ w = Math.round(w * MAX / h); h = MAX; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h); // gif/webp 애니메이션도 첫 프레임만 그려짐
+      URL.revokeObjectURL(url);
+      canvas.toBlob(function(blob){ blob ? resolve(blob) : reject(new Error('thumb fail')); }, 'image/png', 0.85);
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('img load fail')); };
+    img.src = url;
+  });
+}
+
+document.getElementById('upDo').addEventListener('click', async function(){
+  if(!selectedFile) return;
+  const prog = document.getElementById('upProgress');
+  prog.textContent = '업로드 중…';
+  document.getElementById('upDo').disabled = true;
+  try{
+    const fd = new FormData();
+    fd.append('file', selectedFile);
+    if(selectedThumbBlob) fd.append('thumb', selectedThumbBlob, 'thumb.png');
+    const res = await fetch('/api/r2/upload', { method:'POST', body: fd });
+    const data = await res.json();
+    if(!res.ok || data.error){ throw new Error(data.error || '업로드 실패'); }
+    // 메타데이터 기록
+    const ins = await sb.from('archive_items').insert({
+      file_key: data.fileKey,
+      thumb_key: data.thumbKey || null,
+      file_type: data.fileType
+    });
+    if(ins.error){ throw new Error(ins.error.message); }
+    prog.textContent = '완료!';
+    upModal.classList.remove('open');
+    await loadGallery();
+  }catch(e){
+    prog.textContent = '실패: ' + e.message;
+    document.getElementById('upDo').disabled = false;
+  }
+});
+
+// ── 어드민 여부 확인 ───────────────────────────────────────
+async function checkAdmin(){
+  const { data:{ session } } = await sb.auth.getSession();
+  isAdmin = !!session;
+  document.body.classList.toggle('is-admin', isAdmin);
+  document.getElementById('adminBadge').style.display = isAdmin ? '' : 'none';
+}
+
+// ── 초기화 ─────────────────────────────────────────────────
+(async function(){
+  await checkAdmin();
+  await loadGallery();
+})();
+</script>
+</body>
+</html>

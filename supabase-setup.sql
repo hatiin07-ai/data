@@ -168,3 +168,25 @@ create policy "public delete live_recommends" on public.live_recommends for dele
 
 create index if not exists idx_live_recommends_created on public.live_recommends (created_at);
 create index if not exists idx_live_recommends_soop on public.live_recommends (soop_id);
+
+-- 11) 아카이브 갤러리 (R2 저장 이미지 메타데이터)
+create table if not exists public.archive_items (
+  id uuid primary key default gen_random_uuid(),
+  file_key text not null,       -- R2 원본 키
+  thumb_key text,               -- R2 정지 썸네일 키
+  file_type text,               -- image/webp, image/gif, image/png
+  title text,                   -- 선택: 캡션
+  uploader text,                -- 선택: 업로더 표시명
+  created_at timestamptz not null default now()
+);
+alter table public.archive_items enable row level security;
+drop policy if exists "public read archive" on public.archive_items;
+drop policy if exists "public insert archive" on public.archive_items;
+drop policy if exists "auth delete archive" on public.archive_items;
+-- 누구나 조회/업로드
+create policy "public read archive" on public.archive_items for select using (true);
+create policy "public insert archive" on public.archive_items for insert with check (true);
+-- 삭제는 인증된(어드민) 사용자만
+create policy "auth delete archive" on public.archive_items for delete using (auth.role() = 'authenticated');
+
+create index if not exists idx_archive_created on public.archive_items (created_at desc);
