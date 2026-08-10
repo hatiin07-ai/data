@@ -368,19 +368,21 @@ function renderDaysList(){
       badgeText: isOngoing ? '기간중' : null
     };
   });
-  // 데뷔일 있는 스트리머마다 다음 100일 단위 기념일 계산
+  // 데뷔일 있는 스트리머마다 다음 100일 단위 기념일 계산 (당일=1일차)
   const hundredItems = [];
   Object.values(STREAMERS).forEach(s => {
     if(!s.debut_date) return;
     const [dy, dm, dd] = s.debut_date.split('-').map(Number);
     const debutMid = new Date(dy, dm - 1, dd);
     const nowMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const daysPassed = Math.floor((nowMid - debutMid) / 86400000);
-    if(daysPassed < 0) return; // 미래 데뷔
-    let milestone = Math.ceil(daysPassed / 100) * 100;
-    if(milestone === 0) milestone = 100;
-    if(milestone <= daysPassed) milestone += 100;
-    const target = new Date(debutMid.getTime() + milestone * 86400000);
+    // 당일을 1일차로 계산 (데뷔 당일 = 1일)
+    const currentDay = Math.floor((nowMid - debutMid) / 86400000) + 1;
+    if(currentDay < 1) return; // 미래 데뷔
+    // 다음 100일 단위 (오늘이 딱 100단위면 그 다음)
+    let milestone = Math.ceil(currentDay / 100) * 100;
+    if(milestone <= currentDay) milestone += 100;
+    // N일차 날짜 = 데뷔일 + (N-1)일
+    const target = new Date(debutMid.getTime() + (milestone - 1) * 86400000);
     const tM = target.getMonth() + 1, tD = target.getDate();
     const key = tM * 100 + tD;
     const isPast = key < todayKey;
