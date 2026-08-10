@@ -51,10 +51,11 @@
   .loading{ text-align:center; color:var(--ink-soft); font-size:14px; padding:40px 0; grid-column:1/-1; }
 
   /* VOD 재생 모달 */
-  .vod-modal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:110; align-items:center; justify-content:center; padding:20px; }
+  .vod-modal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:110; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:20px; }
   .vod-modal.open{ display:flex; }
   .vod-player-wrap{ width:100%; max-width:900px; aspect-ratio:16/9; background:#000; border-radius:10px; overflow:hidden; }
   .vod-player-wrap iframe{ width:100%; height:100%; border:0; display:block; }
+  .vod-like{ position:static; }
   .vod-modal .close{ position:absolute; top:16px; right:20px; width:40px; height:40px; border:none; border-radius:50%; background:rgba(255,255,255,.15); color:#fff; font-size:20px; cursor:pointer; z-index:2; }
   /* 라이트박스 (원본 보기, 애니메이션 재생) */
   .lightbox{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.9); z-index:100; align-items:center; justify-content:center; padding:20px; }
@@ -187,6 +188,7 @@
     <div class="vod-player-wrap">
       <iframe id="vodPlayer" src="" frameborder="0" allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe>
     </div>
+    <button class="lb-like vod-like" id="vodLike">👍 <span class="lb-count" id="vodLikeCount">0</span></button>
   </div>
 
   <!-- 심연 진입 경고 -->
@@ -498,15 +500,23 @@ galleryEl.addEventListener('click', function(e){
 // VOD 재생 모달
 const vodPlayModal = document.getElementById('vodPlayModal');
 const vodPlayer = document.getElementById('vodPlayer');
+let vodItemId = null;
 function openVodPlayer(embedUrl, itemId){
   if(!embedUrl) return;
   vodPlayer.src = embedUrl;
+  vodItemId = itemId;
+  // 추천수/추천여부 표시
+  const item = itemsCache.find(function(x){ return x.id === itemId; });
+  const liked = !!myLikes()[itemId];
+  document.getElementById('vodLikeCount').textContent = item ? (item.likes || 0) : 0;
+  document.getElementById('vodLike').classList.toggle('liked', liked);
   vodPlayModal.classList.add('open');
   // 본 것으로 기록 → 새로 기록되면 갤러리 갱신(블러 반영)
   if(itemId && markSeen(itemId)) renderGallery();
 }
 function closeVodPlayer(){
   vodPlayModal.classList.remove('open');
+  vodItemId = null;
   vodPlayer.src = 'about:blank'; // 재생 확실히 중지
 }
 document.getElementById('vodPlayClose').addEventListener('click', closeVodPlayer);
@@ -561,31 +571,49 @@ document.getElementById('lbClose').addEventListener('click', closeLightbox);
 lightbox.addEventListener('click', function(e){ if(e.target === lightbox) closeLightbox(); });
 
 // 따봉 토글
-lbLike.addEventListener('click', async function(){
-  if(!lbItemId) return;
-  const liked = !!myLikes()[lbItemId];
-  const item = itemsCache.find(function(x){ return x.id === lbItemId; });
-  lbLike.disabled = true;
+// 추천 토글 공통 처리 (itemId 받아서, 완료 후 콜백으로 UI 갱신)
+async function toggleLike(itemId, onUpdate){
+  const liked = !!myLikes()[itemId];
+  const item = itemsCache.find(function(x){ return x.id === itemId; });
   try{
     if(liked){
-      // 취소
-      await sb.from('archive_likes').delete().eq('item_id', lbItemId).eq('voter_id', voterId());
-      setMyLike(lbItemId, false);
+      await sb.from('archive_likes').delete().eq('item_id', itemId).eq('voter_id', voterId());
+      setMyLike(itemId, false);
       if(item) item.likes = Math.max(0, item.likes - 1);
     } else {
-      // 추천
-      const res = await sb.from('archive_likes').insert({ item_id: lbItemId, voter_id: voterId() });
-      if(res.error && res.error.code !== '23505'){ throw new Error(res.error.message); } // 중복은 무시
-      setMyLike(lbItemId, true);
-      if(item) item.likes = item.likes + 1;
+      const res = await sb.from('archive_likes').insert({ item_id: itemId, voter_id: voterId() });
+      if(res.error && res.error.code !== '23505'){ throw new Error(res.error.message); }
+      setMyLike(itemId, true);
+      if(item) item.likes = (item.likes || 0) + 1;
     }
-    lbCount.textContent = item ? item.likes : 0;
-    lbLike.classList.toggle('liked', !liked);
+    if(onUpdate) onUpdate(item ? item.likes : 0, !liked);
     renderGallery(); // 배지/정렬 갱신
   }catch(e){
     alert('추천 처리 실패: ' + e.message);
   }
+}
+
+lbLike.addEventListener('click', async function(){
+  if(!lbItemId) return;
+  lbLike.disabled = true;
+  await toggleLike(lbItemId, function(count, liked){
+    lbCount.textContent = count;
+    lbLike.classList.toggle('liked', liked);
+  });
   lbLike.disabled = false;
+});
+
+// VOD 모달 따봉
+const vodLike = document.getElementById('vodLike');
+const vodLikeCount = document.getElementById('vodLikeCount');
+vodLike.addEventListener('click', async function(){
+  if(!vodItemId) return;
+  vodLike.disabled = true;
+  await toggleLike(vodItemId, function(count, liked){
+    vodLikeCount.textContent = count;
+    vodLike.classList.toggle('liked', liked);
+  });
+  vodLike.disabled = false;
 });
 
 // ── 삭제 (어드민) ──────────────────────────────────────────
