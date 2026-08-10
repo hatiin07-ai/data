@@ -229,7 +229,7 @@
       <div class="up-pane" id="paneImage">
         <div class="hint">webp · gif · png (각 최대 20MB). 여러 개를 한 번에 올릴 수 있어요. 움직이는 이미지는 정지 썸네일이 자동 생성돼요.</div>
         <div class="drop" id="dropZone">
-          클릭하거나 파일을 여기로 끌어다 놓으세요<br><small style="color:#b5ada3">여러 개 선택 가능</small>
+          클릭하거나 파일을 여기로 끌어다 놓으세요<br><small style="color:#b5ada3">여러 개 선택 · Ctrl+V 붙여넣기 가능</small>
           <input type="file" id="fileInput" accept="image/webp,image/gif,image/png" multiple style="display:none" />
         </div>
         <div class="preview-list" id="previewList" style="display:none"></div>
@@ -736,6 +736,59 @@ fileInput.addEventListener('change', function(){ addFiles(fileInput.files); });
 dropZone.addEventListener('dragover', function(e){ e.preventDefault(); dropZone.classList.add('drag'); });
 dropZone.addEventListener('dragleave', function(){ dropZone.classList.remove('drag'); });
 dropZone.addEventListener('drop', function(e){ e.preventDefault(); dropZone.classList.remove('drag'); addFiles(e.dataTransfer.files); });
+
+// 클립보드 붙여넣기(Ctrl+V) 이미지 지원
+async function handlePaste(e){
+  // 업로드 모달이 열려있고 이미지 탭일 때만
+  if(!upModal.classList.contains('open')) return;
+  if(document.getElementById('paneImage').style.display === 'none') return;
+  const items = (e.clipboardData || window.clipboardData || {}).items;
+  if(!items) return;
+  const blobs = [];
+  for(let i = 0; i < items.length; i++){
+    const it = items[i];
+    if(it.kind === 'file' && it.type.indexOf('image/') === 0){
+      const blob = it.getAsFile();
+      if(blob) blobs.push({ blob: blob, type: it.type });
+    }
+  }
+  if(!blobs.length) return;
+  e.preventDefault();
+  const files = [];
+  for(const b of blobs){
+    let file;
+    if(ALLOWED.includes(b.type)){
+      // 허용 타입은 그대로 (난수 이름 부여)
+      const ext = b.type.split('/')[1];
+      file = new File([b.blob], 'paste_' + Date.now() + '_' + Math.random().toString(36).slice(2,7) + '.' + ext, { type: b.type });
+    } else {
+      // 비허용 타입(jpeg 등)은 png로 변환
+      file = await blobToPng(b.blob).catch(function(){ return null; });
+    }
+    if(file) files.push(file);
+  }
+  if(files.length) addFiles(files);
+}
+// 임의 이미지 blob을 png File로 변환
+function blobToPng(blob){
+  return new Promise(function(resolve, reject){
+    const img = new Image();
+    const url = URL.createObjectURL(blob);
+    img.onload = function(){
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(function(pngBlob){
+        if(!pngBlob){ reject(new Error('convert fail')); return; }
+        resolve(new File([pngBlob], 'paste_' + Date.now() + '_' + Math.random().toString(36).slice(2,7) + '.png', { type: 'image/png' }));
+      }, 'image/png');
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('load fail')); };
+    img.src = url;
+  });
+}
+document.addEventListener('paste', handlePaste);
 
 function resetUpload(){
   uploadQueue = [];
