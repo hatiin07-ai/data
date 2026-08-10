@@ -92,8 +92,6 @@
   .tab-link.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
   .tab-viewer{ color:#c2410c; border-color:#f0c9b0; background:#fff5ef; }
   .tab-viewer:hover{ background:#ffe9dc; }
-  .tab-coord{ color:#2563eb; border-color:#bcd0f5; background:#eff5ff; }
-  .tab-coord:hover{ background:#e0ebff; }
   .tab-up{ color:#0891b2; border-color:#a5e0ec; background:#ecfbff; }
   .tab-up:hover{ background:#d5f4fb; }
   .up-add-btn{ background:#0891b2; color:#fff; border:none; border-radius:12px; padding:11px 20px; font-family:'A2z',sans-serif; font-weight:700; font-size:14px; cursor:pointer; }
@@ -129,8 +127,6 @@
   .rank-row .rk-up{ flex:none; font-weight:800; font-size:14px; color:#0891b2; }
   .tab-archive{ color:#7c3aed; border-color:#d4c5f0; background:#f6f0ff; }
   .tab-archive:hover{ background:#ede0ff; }
-  .coord-live-badge.off{ background:#b5ada3 !important; }
-  #coordList a.is-live{ border-color:#f3b0ac; background:#fff8f7; }
 
   .panel{ display:none; }
   .panel.active{ display:block; }
@@ -250,33 +246,6 @@
     </div>
   </div>
 
-  <div id="coordModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:16px">
-    <div style="background:#fff;border-radius:18px;max-width:440px;width:100%;max-height:88vh;overflow:auto;padding:24px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-        <span style="font-family:'A2z',sans-serif;font-weight:800;font-size:18px;color:#2c2622">📍 좌표 추천</span>
-      </div>
-      <div style="font-size:12.5px;color:#8a8178;margin-bottom:16px;line-height:1.5">지금 볼만한 라이브 방송을 추천해주세요. 방송마다 👍업/👎다운 한 번씩 평가할 수 있어요. 추천은 1시간 뒤 사라져요.</div>
-
-      <!-- 추천 입력 -->
-      <div style="display:flex;gap:6px;margin-bottom:8px">
-        <input type="text" id="coordInput" placeholder="SOOP 아이디 또는 방송 URL" style="flex:1;min-width:0;height:38px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font-size:13px;font-family:inherit" />
-        <button id="coordAddBtn" style="height:38px;border:none;border-radius:10px;background:#2563eb;color:#fff;font-family:'A2z',sans-serif;font-weight:700;font-size:13px;padding:0 16px;cursor:pointer;flex:none">추천</button>
-      </div>
-      <!-- 등록 스트리머 빠른 추천 -->
-      <div style="font-size:11.5px;color:#a09890;margin:10px 0 6px">등록 스트리머 추천</div>
-      <div id="coordStreamerChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px"></div>
-
-      <!-- 추천 리스트 -->
-      <div style="font-size:12px;color:#8a8178;font-weight:700;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
-        <span>지금 추천된 방송</span>
-        <span id="coordCooldown" style="font-size:11px;color:#c2410c;font-weight:400"></span>
-      </div>
-      <div id="coordList" style="display:flex;flex-direction:column;gap:8px;min-height:60px"></div>
-
-      <button id="coordModalClose" style="margin-top:18px;width:100%;font-family:'A2z',sans-serif;font-weight:700;font-size:13px;color:#8a8178;background:#f2ece3;border:none;border-radius:12px;padding:11px;cursor:pointer">닫기</button>
-    </div>
-  </div>
-
   <div class="top">
     <h1>버추얼 연간 캘린더</h1>
   </div>
@@ -288,7 +257,6 @@
     <button class="tab-link" data-target="panelSched">방송 시간표</button>
     <button class="tab-link tab-up" data-target="panelUp">🔼 업</button>
     <a class="tab-link tab-viewer" href="/viewer/" target="_blank" rel="noopener">📺 뷰어</a>
-    <button class="tab-link tab-coord" id="coordBtn">📍 좌표추천</button>
     <a class="tab-link tab-archive" href="/archive/" target="_blank" rel="noopener">📁 아카이브</a>
   </nav>
 
@@ -866,229 +834,6 @@ tabLinks.forEach(btn => {
     const tab = e.target.closest('[data-target="panelUp"]');
     if(tab) loadUpRequests();
   });
-})();
-
-// ── 좌표 추천 ──────────────────────────────────────────────
-(function(){
-  const sb = initSupabase();
-  const modal = document.getElementById('coordModal');
-  const listEl = document.getElementById('coordList');
-  const input = document.getElementById('coordInput');
-  const chipsEl = document.getElementById('coordStreamerChips');
-  const cooldownEl = document.getElementById('coordCooldown');
-  const HOUR = 3600 * 1000;
-
-  // 방문자 식별 (localStorage UUID)
-  function voterId(){
-    let v = localStorage.getItem('coord_voter');
-    if(!v){
-      v = 'v_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
-      localStorage.setItem('coord_voter', v);
-    }
-    return v;
-  }
-  // 내가 각 방송에 어떤 투표를 했는지 캐시 (soop_id -> 1 | -1)
-  function myVotes(){
-    try{ return JSON.parse(localStorage.getItem('coord_myvotes') || '{}'); }catch(e){ return {}; }
-  }
-  function setMyVote(soopId, v){
-    const m = myVotes(); m[soopId] = v;
-    localStorage.setItem('coord_myvotes', JSON.stringify(m));
-  }
-
-  function extractId(raw){
-    raw = (raw || '').trim();
-    if(!raw) return '';
-    if(!/^https?:\/\//i.test(raw) && !raw.includes('/')) return raw;
-    try{
-      const u = new URL(raw.startsWith('http') ? raw : 'https://' + raw);
-      const parts = u.pathname.split('/').filter(Boolean);
-      return parts[0] || '';
-    }catch(e){ return raw; }
-  }
-
-  // 1시간 지난 추천 삭제 후, 유효 추천 로드 → 집계
-  async function loadRecommends(){
-    // 전체 로드 후 방송별 마지막 추천 시각 계산
-    const res = await sb.from('live_recommends').select('*');
-    const rows = res.data || [];
-    const mine = myVotes();
-    const now = Date.now();
-
-    // soop_id별 집계 + 방송별 최신 투표 시각
-    const map = {};
-    rows.forEach(function(r){
-      if(!map[r.soop_id]) map[r.soop_id] = { soop_id: r.soop_id, name: r.display_name || r.soop_id, score: 0, latest: r.created_at };
-      map[r.soop_id].score += (r.vote || 0);
-      if(r.created_at > map[r.soop_id].latest) map[r.soop_id].latest = r.created_at;
-      if(r.display_name) map[r.soop_id].name = r.display_name;
-    });
-
-    // 방송별 마지막 추천이 1시간 경과했으면 그 방송의 모든 행 삭제
-    const expiredIds = [];
-    Object.values(map).forEach(function(m){
-      if(now - new Date(m.latest).getTime() >= HOUR) expiredIds.push(m.soop_id);
-    });
-    if(expiredIds.length){
-      sb.from('live_recommends').delete().in('soop_id', expiredIds).then(function(){}, function(){});
-      // 내 투표 캐시에서도 제거
-      const mv = myVotes();
-      expiredIds.forEach(function(id){ delete mv[id]; });
-      localStorage.setItem('coord_myvotes', JSON.stringify(mv));
-      expiredIds.forEach(function(id){ delete map[id]; });
-    }
-
-    const list = Object.values(map).sort(function(a,b){
-      if(b.score !== a.score) return b.score - a.score; // 점수 높은 순
-      return b.latest.localeCompare(a.latest);           // 동률이면 최신순
-    });
-    renderList(list, mine);
-    fetchLiveInfo(list); // 온에어 상태 + 방송 제목 비동기로 채우기
-  }
-
-  // 각 추천 방송의 온에어/제목을 API로 받아 카드에 반영
-  function fetchLiveInfo(list){
-    list.forEach(function(item){
-      fetch('/api/soop-status?id=' + encodeURIComponent(item.soop_id))
-        .then(function(r){ return r.json(); })
-        .then(function(d){
-          const card = document.getElementById('coord-card-' + item.soop_id);
-          if(!card) return;
-          const badge = card.querySelector('.coord-live-badge');
-          const titleEl = card.querySelector('.coord-title');
-          const nameEl = card.querySelector('.coord-name');
-          // 방송 정보의 닉네임으로 이름 갱신 (아이디 대신 실제 닉네임 표시)
-          if(d.nick && nameEl) nameEl.textContent = d.nick;
-          if(d.isLive){
-            if(badge){ badge.textContent = 'ON AIR'; badge.style.display = ''; }
-            if(titleEl){
-              var t = d.title || '';
-              if(d.viewers) t += (t ? '  ·  ' : '') + '👁 ' + Number(d.viewers).toLocaleString();
-              titleEl.textContent = t;
-              titleEl.style.display = t ? '' : 'none';
-            }
-            card.classList.add('is-live');
-          } else {
-            if(badge){ badge.textContent = 'OFF'; badge.style.display = ''; badge.classList.add('off'); }
-            if(titleEl){ titleEl.textContent = '방송 종료'; titleEl.style.color = '#b5ada3'; }
-          }
-        })
-        .catch(function(){});
-    });
-  }
-
-  function renderList(list, mine){
-    mine = mine || {};
-    if(!list.length){
-      listEl.innerHTML = '<div style="text-align:center;color:#b5ada3;font-size:13px;padding:20px 0">추천된 라이브 방송이 없습니다.</div>';
-      return;
-    }
-    listEl.innerHTML = list.map(function(item){
-      const img = 'https://profile.img.sooplive.com/LOGO/' + item.soop_id.slice(0,2) + '/' + item.soop_id + '/' + item.soop_id + '.jpg';
-      const voted = mine[item.soop_id]; // 1 | -1 | undefined
-      const upDisabled = voted === -1 ? 'disabled' : '';   // 다운 눌렀으면 업 못 누름
-      const downDisabled = voted === 1 ? 'disabled' : '';  // 업 눌렀으면 다운 못 누름
-      const upOpacity = (voted === -1) ? '0.25' : (voted === 1 ? '1' : '0.7');
-      const downOpacity = (voted === 1) ? '0.25' : (voted === -1 ? '1' : '0.7');
-      const scoreColor = item.score > 0 ? '#2563eb' : (item.score < 0 ? '#c0392b' : '#8a8178');
-      return '<div id="coord-card-' + item.soop_id + '" class="coord-card" ' +
-        'style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card)">' +
-          '<a href="https://play.sooplive.com/' + item.soop_id + '/" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none">' +
-            '<img src="' + img + '" onerror="this.style.visibility=\'hidden\'" style="width:40px;height:40px;border-radius:50%;flex:none;object-fit:cover;background:#eee" />' +
-            '<div style="flex:1;min-width:0">' +
-              '<div style="display:flex;align-items:center;gap:6px">' +
-                '<span class="coord-live-badge" style="display:none;flex:none;font-size:10px;font-weight:700;color:#fff;background:#e0322a;border-radius:5px;padding:1px 6px">ON AIR</span>' +
-                '<span class="coord-name" style="font-weight:700;font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.name + '</span>' +
-              '</div>' +
-              '<div class="coord-title" style="display:none;font-size:11.5px;color:#6b6259;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px"></div>' +
-              '<div style="font-size:11px;color:#a09890">@' + item.soop_id + '</div>' +
-            '</div>' +
-          '</a>' +
-          '<div style="flex:none;display:flex;align-items:center;gap:3px">' +
-            '<button data-vote-up="' + item.soop_id + '" data-name="' + (item.name||'').replace(/"/g,'') + '" ' + upDisabled + ' ' +
-              'style="border:none;background:none;cursor:' + (upDisabled?'default':'pointer') + ';font-size:17px;padding:2px 3px;opacity:' + upOpacity + '">👍</button>' +
-            '<span style="min-width:24px;text-align:center;font-weight:700;font-size:14px;color:' + scoreColor + '">' + item.score + '</span>' +
-            '<button data-vote-down="' + item.soop_id + '" data-name="' + (item.name||'').replace(/"/g,'') + '" ' + downDisabled + ' ' +
-              'style="border:none;background:none;cursor:' + (downDisabled?'default':'pointer') + ';font-size:17px;padding:2px 3px;opacity:' + downOpacity + '">👎</button>' +
-          '</div>' +
-        '</div>';
-    }).join('');
-  }
-
-  // 업/다운 투표: voter_id+soop_id 유니크로 내 투표 1행 upsert
-  async function castVote(rawId, name, vote){
-    const soop_id = extractId(rawId);
-    if(!soop_id) return;
-    const prev = myVotes()[soop_id];
-    if(prev === vote) return;               // 같은 방향 재클릭 무시
-    if(prev === 1 && vote === -1) return;    // 업→다운 금지
-    if(prev === -1 && vote === 1) return;    // 다운→업 금지
-
-    // 온에어인 방송만 추천/투표 가능 — 방송 정보 확인
-    let live;
-    try{
-      const d = await fetch('/api/soop-status?id=' + encodeURIComponent(soop_id)).then(function(r){ return r.json(); });
-      live = d.isLive;
-      if(d.nick) name = d.nick; // 닉네임 있으면 표시명으로 사용
-    }catch(e){ live = false; }
-    if(!live){
-      alert('지금 방송 중인 스트리머만 추천할 수 있어요.');
-      return;
-    }
-
-    const res = await sb.from('live_recommends').upsert({
-      soop_id: soop_id,
-      display_name: name || soop_id,
-      voter_id: voterId(),
-      vote: vote,
-      created_at: new Date().toISOString()
-    }, { onConflict: 'voter_id,soop_id' });
-    if(res.error){ alert('투표 실패: ' + res.error.message); return; }
-    setMyVote(soop_id, vote);
-    await loadRecommends();
-  }
-
-  // 투표 버튼 이벤트 위임
-  listEl.addEventListener('click', function(e){
-    const up = e.target.closest('[data-vote-up]');
-    const down = e.target.closest('[data-vote-down]');
-    if(up && !up.hasAttribute('disabled')) castVote(up.dataset.voteUp, up.dataset.name, 1);
-    if(down && !down.hasAttribute('disabled')) castVote(down.dataset.voteDown, down.dataset.name, -1);
-  });
-
-  // 아이디 직접 입력 = 업 투표로 목록에 추가
-  function addByInput(){
-    const id = extractId(input.value);
-    if(!id){ alert('아이디를 입력해주세요.'); return; }
-    castVote(id, id, 1);
-    input.value = '';
-  }
-
-  // 등록 스트리머 칩
-  function renderStreamerChips(){
-    const list = (typeof STREAMERS === 'object' && STREAMERS) ? Object.values(STREAMERS).filter(function(s){ return s.soop_id; }) : [];
-    chipsEl.innerHTML = list.map(function(s){
-      return '<button class="coord-chip" data-sid="' + s.soop_id + '" data-name="' + (s.name||'').replace(/"/g,'') + '" ' +
-        'style="border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 12px;font-size:12.5px;font-family:inherit;cursor:pointer;color:var(--ink)">' +
-        s.name + '</button>';
-    }).join('') || '<span style="font-size:12px;color:#b5ada3">등록된 스트리머 없음</span>';
-  }
-  chipsEl.addEventListener('click', function(e){
-    const chip = e.target.closest('[data-sid]');
-    if(chip) castVote(chip.dataset.sid, chip.dataset.name, 1); // 칩 = 업 투표로 추가
-  });
-
-  // 버튼/모달 이벤트
-  document.getElementById('coordBtn').addEventListener('click', function(){
-    renderStreamerChips();
-    loadRecommends();
-    if(cooldownEl) cooldownEl.textContent = '';
-    modal.style.display = 'flex';
-  });
-  document.getElementById('coordAddBtn').addEventListener('click', addByInput);
-  input.addEventListener('keydown', function(e){ if(e.key === 'Enter') addByInput(); });
-  document.getElementById('coordModalClose').addEventListener('click', function(){ modal.style.display = 'none'; });
-  modal.addEventListener('click', function(e){ if(e.target === modal) modal.style.display = 'none'; });
 })();
 </script>
 </body>
