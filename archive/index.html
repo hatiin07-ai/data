@@ -225,7 +225,7 @@
 
       <!-- 이미지 탭 -->
       <div class="up-pane" id="paneImage">
-        <div class="hint">webp · gif · png (각 최대 10MB). 여러 개를 한 번에 올릴 수 있어요. 움직이는 이미지는 정지 썸네일이 자동 생성돼요.</div>
+        <div class="hint">webp · gif · png (각 최대 20MB). 여러 개를 한 번에 올릴 수 있어요. 움직이는 이미지는 정지 썸네일이 자동 생성돼요.</div>
         <div class="drop" id="dropZone">
           클릭하거나 파일을 여기로 끌어다 놓으세요<br><small style="color:#b5ada3">여러 개 선택 가능</small>
           <input type="file" id="fileInput" accept="image/webp,image/gif,image/png" multiple style="display:none" />
@@ -723,7 +723,7 @@ async function addFiles(fileList){
   const files = Array.prototype.slice.call(fileList || []);
   for(const file of files){
     if(!ALLOWED.includes(file.type)){ continue; }          // 허용 안 되는 형식은 조용히 건너뜀
-    if(file.size > 10*1024*1024){ alert(file.name + ' : 10MB를 넘어 제외됐어요.'); continue; }
+    if(file.size > 20*1024*1024){ alert(file.name + ' : 20MB를 넘어 제외됐어요.'); continue; }
     const id = 'q_' + Math.random().toString(36).slice(2);
     const item = { file: file, thumbBlob: null, id: id, status: 'pending' };
     uploadQueue.push(item);

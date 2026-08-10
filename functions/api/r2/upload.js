@@ -4,7 +4,7 @@
 // ⚠️ R2 바인딩(env.ARCHIVE_BUCKET)은 나중에 연결. 없으면 503 반환.
 
 const ALLOWED = ['image/webp', 'image/gif', 'image/png'];
-const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_SIZE = 20 * 1024 * 1024; // 20MB
 
 function extOf(type) {
   if (type === 'image/webp') return 'webp';
