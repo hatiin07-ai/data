@@ -127,6 +127,10 @@
   .name-cell{ display:flex; align-items:center; gap:6px; font-size:16px; }
   .dot{ width:11px; height:11px; border-radius:50%; flex:none; display:inline-block; }
 
+  .cal-filters{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+  .cal-filter{ display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border:1px solid var(--line); border-radius:18px; background:var(--card); cursor:pointer; font-size:14px; color:var(--ink); user-select:none; transition:all .15s; }
+  .cal-filter input{ width:15px; height:15px; accent-color:#E0457B; cursor:pointer; margin:0; }
+  .cal-filter:has(input:not(:checked)){ opacity:0.45; background:#f5f0ea; }
   .list-table{ width:100%; table-layout:fixed; border-collapse:separate; border-spacing:0 8px; font-size:17px; }
   .list-table th{ text-align:center; font-size:14px; color:var(--ink-soft); font-weight:400; padding:0 12px 6px; }
   .list-table td{ padding:13px 12px; vertical-align:middle; text-align:center; }
@@ -259,6 +263,12 @@
       <h2>일정</h2>
       <span class="sub">생일 · 데뷔 주년 · 기간 일정</span>
     </div>
+    <div class="cal-filters" id="calFilters">
+      <label class="cal-filter"><input type="checkbox" data-cat="hundred" checked /><span>100일단위</span></label>
+      <label class="cal-filter"><input type="checkbox" data-cat="birthday" checked /><span>생일</span></label>
+      <label class="cal-filter"><input type="checkbox" data-cat="anniv" checked /><span>주년</span></label>
+      <label class="cal-filter"><input type="checkbox" data-cat="etc" checked /><span>기타</span></label>
+    </div>
     <div class="month-block">
       <table class="list-table">
         <thead><tr><th>날짜</th><th>스트리머</th><th>구분</th></tr></thead>
@@ -330,15 +340,18 @@ function renderDaysList(){
   const dayItems = SPECIAL_DAYS.map(e => {
     const s = STREAMERS[e.streamer_id] || { name:'?', color:'#999' };
     const { year: effYear, sortKey } = effectiveYearAndKey(e.month, e.day);
-    let typeWord;
+    let typeWord, category;
     if(e.type === 'birthday'){
       typeWord = '생일';
+      category = 'birthday';
     } else if(s.debut_date){
       const debutYear = parseInt(s.debut_date.slice(0,4), 10);
       const n = effYear - debutYear;
       typeWord = n > 0 ? `${n}주년` : '주년';
+      category = 'anniv';
     } else {
       typeWord = '주년';
+      category = 'anniv';
     }
     const isToday = e.month * 100 + e.day === todayKey;
     return {
@@ -347,6 +360,7 @@ function renderDaysList(){
       name: s.name,
       color: s.color,
       typeWord,
+      category,
       isHighlight: isToday,
       badgeText: isToday ? '오늘' : null
     };
@@ -364,6 +378,7 @@ function renderDaysList(){
       name: s ? s.name : (r.custom_name || '기간 일정'),
       color: s ? s.color : '#8a8578',
       typeWord: r.label,
+      category: 'etc',
       isHighlight: isOngoing,
       badgeText: isOngoing ? '기간중' : null
     };
@@ -393,24 +408,42 @@ function renderDaysList(){
       name: s.name,
       color: s.color,
       typeWord: `${milestone}일`,
+      category: 'hundred',
       isHighlight: isToday,
       badgeText: isToday ? '오늘' : null
     });
   });
 
   const sorted = dayItems.concat(rangeItems).concat(hundredItems).sort((a,b) => a.sortKey - b.sortKey);
+  window.__daysCache = sorted; // 필터용 캐시
+  renderDaysTable();
+}
 
+// 체크된 카테고리만 필터링해서 테이블 렌더
+function renderDaysTable(){
+  const sorted = window.__daysCache || [];
   const tbody = document.getElementById('daysListBody');
-  if(!sorted.length){
-    tbody.innerHTML = `<tr><td colspan="3" class="loading">등록된 일정이 없어요.</td></tr>`;
+  // 체크된 카테고리 수집
+  const active = {};
+  document.querySelectorAll('#calFilters input[data-cat]').forEach(cb => { active[cb.dataset.cat] = cb.checked; });
+  const filtered = sorted.filter(item => active[item.category] !== false);
+
+  if(!filtered.length){
+    tbody.innerHTML = `<tr><td colspan="3" class="loading">해당하는 일정이 없어요.</td></tr>`;
     return;
   }
-  tbody.innerHTML = sorted.map(item => `<tr class="${item.isHighlight ? 'today-row' : ''}">
+  tbody.innerHTML = filtered.map(item => `<tr class="${item.isHighlight ? 'today-row' : ''}">
       <td>${item.dateLabel}${item.badgeText ? `<span class="today-badge">${item.badgeText}</span>` : ''}</td>
       <td><span class="name-cell"><span class="dot" style="background:${item.color}"></span>${item.name}</span></td>
       <td>${item.typeWord}</td>
     </tr>`).join('');
 }
+
+// 필터 체크박스 변경 시 재렌더
+document.addEventListener('DOMContentLoaded', function(){
+  const cf = document.getElementById('calFilters');
+  if(cf) cf.addEventListener('change', renderDaysTable);
+});
 
 function renderWeek(){
   const streamers = Object.values(STREAMERS);
