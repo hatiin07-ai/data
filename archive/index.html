@@ -124,6 +124,11 @@
   body.manage-mode .card .sel-check{ display:flex; }
   body.manage-mode .card .del-btn{ display:none !important; }
   .card.selected .sel-check{ background:var(--accent); color:#fff; }
+  /* 이미 본(클릭한) 항목 블러 처리 */
+  .card.seen img{ filter:blur(3px) brightness(0.85); opacity:0.55; transition:filter .2s, opacity .2s; }
+  .card.seen:hover img{ filter:blur(0); opacity:1; }
+  .card.seen::after{ content:'본 것'; position:absolute; top:6px; left:50%; transform:translateX(-50%); font-size:10px; font-weight:700; color:#fff; background:rgba(0,0,0,.6); border-radius:10px; padding:2px 10px; z-index:2; pointer-events:none; }
+  .card.seen:hover::after{ display:none; }
 </style>
 </head>
 <body>
@@ -281,6 +286,18 @@ function setMyLike(itemId, liked){
   if(liked) m[itemId] = 1; else delete m[itemId];
   localStorage.setItem('archive_mylikes', JSON.stringify(m));
 }
+// 이미 본(클릭한) 항목 기록
+function seenItems(){
+  try{ return JSON.parse(localStorage.getItem('archive_seen') || '{}'); }catch(e){ return {}; }
+}
+function markSeen(itemId){
+  const m = seenItems();
+  if(m[itemId]) return false; // 이미 기록됨
+  m[itemId] = 1;
+  localStorage.setItem('archive_seen', JSON.stringify(m));
+  return true;
+}
+function isSeen(itemId){ return !!seenItems()[itemId]; }
 
 // ── 갤러리 로드 ────────────────────────────────────────────
 async function loadGallery(){
@@ -315,12 +332,13 @@ function renderGallery(){
     const isVod = it.kind === 'vod';
     const selCls = selectedIds.has(it.id) ? ' selected' : '';
     const selectableCls = manageMode ? ' selectable' : '';
+    const seenCls = (!manageMode && isSeen(it.id)) ? ' seen' : ''; // 관리 모드에선 블러 해제
     const selCheck = '<span class="sel-check">' + (selectedIds.has(it.id) ? '✓' : '') + '</span>';
     if(isVod){
       const thumb = it.thumb_url || '';
       const tnMatch = (it.vod_url || '').match(/(\d{6,})/);
       const embedUrl = tnMatch ? 'https://vod.sooplive.com/player/' + tnMatch[1] + '/embed?autoPlay=true&showChat=false&mutePlay=false' : '';
-      return '<div class="card card-vod' + selCls + selectableCls + '" data-id="' + it.id + '" data-vodurl="' + (it.vod_url||'') + '">' +
+      return '<div class="card card-vod' + selCls + selectableCls + seenCls + '" data-id="' + it.id + '" data-vodurl="' + (it.vod_url||'') + '">' +
         '<img src="' + thumb + '" loading="lazy" alt="" data-vodplay="' + embedUrl + '" data-voditem="' + it.id + '" onerror="this.style.background=\'#ddd\'" />' +
         '<span class="type-tag vod-tag">▶ VOD</span>' +
         '<span class="play-icon">▶</span>' +
@@ -333,7 +351,7 @@ function renderGallery(){
     const thumb = it.thumb_key ? fileUrl(it.thumb_key) : fileUrl(it.file_key);
     const orig = fileUrl(it.file_key);
     const ext = (it.file_type || '').split('/')[1] || '';
-    return '<div class="card' + selCls + selectableCls + '" data-id="' + it.id + '" data-orig="' + orig + '" data-filekey="' + it.file_key + '" data-thumbkey="' + (it.thumb_key||'') + '">' +
+    return '<div class="card' + selCls + selectableCls + seenCls + '" data-id="' + it.id + '" data-orig="' + orig + '" data-filekey="' + it.file_key + '" data-thumbkey="' + (it.thumb_key||'') + '">' +
       '<img src="' + thumb + '" loading="lazy" alt="" data-open="' + orig + '" data-openid="' + it.id + '" />' +
       (ext ? '<span class="type-tag">' + ext + '</span>' : '') +
       (it.likes > 0 ? '<span class="like-badge">👍 ' + it.likes + '</span>' : '') +
@@ -462,17 +480,19 @@ galleryEl.addEventListener('click', function(e){
   const vod = e.target.closest('[data-vodplay]');
   const del = e.target.closest('[data-del]');
   if(del){ e.stopPropagation(); handleDelete(del.dataset.del); return; }
-  if(vod){ openVodPlayer(vod.dataset.vodplay); return; }
+  if(vod){ openVodPlayer(vod.dataset.vodplay, vod.dataset.voditem); return; }
   if(img){ openLightbox(img.dataset.open, img.dataset.openid); }
 });
 
 // VOD 재생 모달
 const vodPlayModal = document.getElementById('vodPlayModal');
 const vodPlayer = document.getElementById('vodPlayer');
-function openVodPlayer(embedUrl){
+function openVodPlayer(embedUrl, itemId){
   if(!embedUrl) return;
   vodPlayer.src = embedUrl;
   vodPlayModal.classList.add('open');
+  // 본 것으로 기록 → 새로 기록되면 갤러리 갱신(블러 반영)
+  if(itemId && markSeen(itemId)) renderGallery();
 }
 function closeVodPlayer(){
   vodPlayModal.classList.remove('open');
@@ -489,6 +509,8 @@ function openLightbox(src, itemId){
   lbCount.textContent = item ? item.likes : 0;
   lbLike.classList.toggle('liked', liked);
   lightbox.classList.add('open');
+  // 본 것으로 기록 → 새로 기록되면 갤러리 갱신(블러 반영)
+  if(itemId && markSeen(itemId)) renderGallery();
 }
 function closeLightbox(){ lightbox.classList.remove('open'); lbImg.src=''; lbItemId = null; }
 
