@@ -219,3 +219,7 @@ alter table public.archive_items add column if not exists thumb_url text;    -- 
 -- 14) 아카이브 채널 분기 (서브컬쳐 / 심연)
 alter table public.archive_items add column if not exists channel text default 'subculture';  -- 'subculture' | 'abyss'
 create index if not exists idx_archive_channel on public.archive_items (channel, created_at desc);
+
+-- 15) 아카이브 채널 이동을 위한 update 정책 (인증된 관리자만)
+drop policy if exists "auth update archive" on public.archive_items;
+create policy "auth update archive" on public.archive_items for update using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
