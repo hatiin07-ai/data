@@ -36,6 +36,10 @@
   .card{ position:relative; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--card); aspect-ratio:1/1; }
   .card img{ width:100%; height:100%; object-fit:cover; display:block; cursor:pointer; background:#f0ece6; }
   .card .type-tag{ position:absolute; top:6px; left:6px; font-size:9.5px; font-weight:700; color:#fff; background:rgba(0,0,0,.6); border-radius:5px; padding:2px 6px; text-transform:uppercase; }
+  .card .vod-tag{ background:rgba(194,65,12,.9); }
+  .card-vod img{ cursor:pointer; }
+  .card .play-icon{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:44px; height:44px; border-radius:50%; background:rgba(0,0,0,.55); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; padding-left:3px; pointer-events:none; }
+  .card .vod-caption{ position:absolute; left:0; right:0; bottom:0; background:linear-gradient(transparent, rgba(0,0,0,.75)); color:#fff; font-size:10.5px; padding:14px 8px 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
   .card .del-btn{ position:absolute; top:6px; right:6px; width:26px; height:26px; border:none; border-radius:50%; background:rgba(196,32,32,.9); color:#fff; cursor:pointer; font-size:13px; display:none; align-items:center; justify-content:center; }
   body.is-admin .card .del-btn{ display:flex; }
 
@@ -53,6 +57,9 @@
   .up-modal.open{ display:flex; }
   .up-box{ background:#fff; border-radius:18px; max-width:420px; width:100%; padding:24px; }
   .up-box h2{ font-size:18px; font-weight:800; margin:0 0 6px; }
+  .up-tabs{ display:flex; gap:4px; background:#f2ece3; border-radius:12px; padding:3px; margin-bottom:16px; }
+  .up-tab{ flex:1; border:none; background:none; font-family:'A2z',sans-serif; font-size:13px; font-weight:700; color:var(--ink-soft); padding:9px; border-radius:9px; cursor:pointer; }
+  .up-tab.active{ background:#fff; color:var(--accent); box-shadow:0 1px 3px rgba(0,0,0,.08); }
   .up-box .hint{ font-size:12px; color:var(--ink-soft); margin-bottom:16px; line-height:1.5; }
   .drop{ border:2px dashed var(--line); border-radius:12px; padding:28px 16px; text-align:center; color:var(--ink-soft); font-size:13px; cursor:pointer; margin-bottom:12px; }
   .drop.drag{ border-color:var(--accent); background:#fff8f4; }
@@ -104,18 +111,49 @@
   <!-- 업로드 모달 -->
   <div class="up-modal" id="upModal">
     <div class="up-box">
-      <h2>이미지 업로드</h2>
-      <div class="hint">webp · gif · png (각 최대 10MB). 여러 개를 한 번에 올릴 수 있어요. 움직이는 이미지는 정지 썸네일이 자동 생성돼요.</div>
-      <div class="drop" id="dropZone">
-        클릭하거나 파일을 여기로 끌어다 놓으세요<br><small style="color:#b5ada3">여러 개 선택 가능</small>
-        <input type="file" id="fileInput" accept="image/webp,image/gif,image/png" multiple style="display:none" />
+      <h2>추가하기</h2>
+      <div class="up-tabs">
+        <button class="up-tab active" data-uptab="image">🖼️ 이미지</button>
+        <button class="up-tab" data-uptab="vod">▶ VOD·클립</button>
       </div>
-      <div class="preview-list" id="previewList" style="display:none"></div>
-      <div class="up-actions">
-        <button class="up-cancel" id="upCancel">취소</button>
-        <button class="up-do" id="upDo" disabled>업로드</button>
+
+      <!-- 이미지 탭 -->
+      <div class="up-pane" id="paneImage">
+        <div class="hint">webp · gif · png (각 최대 10MB). 여러 개를 한 번에 올릴 수 있어요. 움직이는 이미지는 정지 썸네일이 자동 생성돼요.</div>
+        <div class="drop" id="dropZone">
+          클릭하거나 파일을 여기로 끌어다 놓으세요<br><small style="color:#b5ada3">여러 개 선택 가능</small>
+          <input type="file" id="fileInput" accept="image/webp,image/gif,image/png" multiple style="display:none" />
+        </div>
+        <div class="preview-list" id="previewList" style="display:none"></div>
+        <div class="up-actions">
+          <button class="up-cancel" id="upCancel">취소</button>
+          <button class="up-do" id="upDo" disabled>업로드</button>
+        </div>
+        <div class="up-progress" id="upProgress"></div>
       </div>
-      <div class="up-progress" id="upProgress"></div>
+
+      <!-- VOD 탭 -->
+      <div class="up-pane" id="paneVod" style="display:none">
+        <div class="hint">SOOP VOD·클립 URL을 넣으면 썸네일과 제목을 가져와요.<br><small style="color:#b5ada3">예: https://vod.sooplive.com/player/183858893</small></div>
+        <div style="display:flex;gap:6px;margin-bottom:12px">
+          <input type="text" id="vodInput" placeholder="VOD·클립 URL" style="flex:1;min-width:0;height:38px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font-size:13px;font-family:inherit" />
+          <button id="vodFetchBtn" style="height:38px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-family:'A2z',sans-serif;font-weight:700;font-size:13px;padding:0 16px;cursor:pointer;flex:none">불러오기</button>
+        </div>
+        <div id="vodPreview" style="display:none;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:12px">
+          <img id="vodThumb" src="" alt="" style="width:100%;aspect-ratio:16/9;object-fit:cover;background:#f0ece6;display:block" />
+          <div style="padding:10px 12px">
+            <div id="vodTitle" style="font-weight:700;font-size:14px;color:var(--ink);margin-bottom:3px"></div>
+            <div id="vodMeta" style="font-size:11.5px;color:var(--ink-soft)"></div>
+          </div>
+        </div>
+        <div class="up-actions">
+          <button class="up-cancel" id="vodCancel">취소</button>
+          <button class="up-do" id="vodAdd" disabled>추가</button>
+        </div>
+        <div class="up-progress" id="vodProgress"></div>
+      </div>
+    </div>
+  </div>
     </div>
   </div>
 
@@ -177,6 +215,19 @@ function renderGallery(){
     return b.created_at.localeCompare(a.created_at);    // 최신순
   });
   galleryEl.innerHTML = sorted.map(function(it){
+    const isVod = it.kind === 'vod';
+    if(isVod){
+      // VOD 카드: 외부 썸네일 + 재생 아이콘, 클릭 시 원본으로 이동
+      const thumb = it.thumb_url || '';
+      return '<div class="card card-vod" data-id="' + it.id + '" data-vodurl="' + (it.vod_url||'') + '">' +
+        '<img src="' + thumb + '" loading="lazy" alt="" data-vodopen="' + (it.vod_url||'') + '" onerror="this.style.background=\'#ddd\'" />' +
+        '<span class="type-tag vod-tag">▶ VOD</span>' +
+        '<span class="play-icon">▶</span>' +
+        (it.vod_title ? '<span class="vod-caption">' + it.vod_title + '</span>' : '') +
+        (it.likes > 0 ? '<span class="like-badge">👍 ' + it.likes + '</span>' : '') +
+        '<button class="del-btn" data-del="' + it.id + '">✕</button>' +
+      '</div>';
+    }
     const thumb = it.thumb_key ? fileUrl(it.thumb_key) : fileUrl(it.file_key);
     const orig = fileUrl(it.file_key);
     const ext = (it.file_type || '').split('/')[1] || '';
@@ -207,8 +258,10 @@ let lbItemId = null;
 
 galleryEl.addEventListener('click', function(e){
   const img = e.target.closest('[data-open]');
+  const vod = e.target.closest('[data-vodopen]');
   const del = e.target.closest('[data-del]');
   if(del){ e.stopPropagation(); handleDelete(del.dataset.del); return; }
+  if(vod){ window.open(vod.dataset.vodopen, '_blank', 'noopener'); return; }
   if(img){ openLightbox(img.dataset.open, img.dataset.openid); }
 });
 
@@ -257,21 +310,24 @@ lbLike.addEventListener('click', async function(){
 // ── 삭제 (어드민) ──────────────────────────────────────────
 async function handleDelete(id){
   if(!isAdmin) return;
-  if(!confirm('이 이미지를 삭제할까요?')) return;
+  if(!confirm('삭제할까요?')) return;
   const card = galleryEl.querySelector('[data-id="' + id + '"]');
   const fileKey = card ? card.dataset.filekey : null;
   const thumbKey = card ? card.dataset.thumbkey : null;
-  // 1) R2에서 파일 삭제 (세션 토큰 전달)
-  const { data:{ session } } = await sb.auth.getSession();
-  const token = session ? session.access_token : '';
-  try{
-    await fetch('/api/r2/delete', {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token },
-      body: JSON.stringify({ fileKey: fileKey, thumbKey: thumbKey || null })
-    });
-  }catch(e){}
-  // 2) DB 행 삭제
+  // R2 파일이 있는 경우만 삭제 (VOD는 file_key가 'vod:'라 R2 파일 없음)
+  const hasR2 = fileKey && fileKey.indexOf('archive/') === 0;
+  if(hasR2){
+    const { data:{ session } } = await sb.auth.getSession();
+    const token = session ? session.access_token : '';
+    try{
+      await fetch('/api/r2/delete', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token },
+        body: JSON.stringify({ fileKey: fileKey, thumbKey: thumbKey || null })
+      });
+    }catch(e){}
+  }
+  // DB 행 삭제
   const res = await sb.from('archive_items').delete().eq('id', id);
   if(res.error){ alert('삭제 실패: ' + res.error.message); return; }
   await loadGallery();
@@ -284,7 +340,85 @@ const dropZone = document.getElementById('dropZone');
 const previewList = document.getElementById('previewList');
 let uploadQueue = []; // { file, thumbBlob, id, status }
 
-document.getElementById('uploadBtn').addEventListener('click', function(){ resetUpload(); upModal.classList.add('open'); });
+document.getElementById('uploadBtn').addEventListener('click', function(){ resetUpload(); resetVod(); switchUpTab('image'); upModal.classList.add('open'); });
+
+// ── 업로드 탭 전환 ─────────────────────────────────────────
+function switchUpTab(tab){
+  document.querySelectorAll('.up-tab').forEach(function(t){ t.classList.toggle('active', t.dataset.uptab === tab); });
+  document.getElementById('paneImage').style.display = tab === 'image' ? '' : 'none';
+  document.getElementById('paneVod').style.display = tab === 'vod' ? '' : 'none';
+}
+document.querySelector('.up-tabs').addEventListener('click', function(e){
+  const t = e.target.closest('[data-uptab]');
+  if(t) switchUpTab(t.dataset.uptab);
+});
+
+// ── VOD 추가 ───────────────────────────────────────────────
+let vodData = null;
+const vodInput = document.getElementById('vodInput');
+
+function resetVod(){
+  vodData = null;
+  vodInput.value = '';
+  document.getElementById('vodPreview').style.display = 'none';
+  document.getElementById('vodAdd').disabled = true;
+  document.getElementById('vodProgress').textContent = '';
+}
+document.getElementById('vodCancel').addEventListener('click', function(){ upModal.classList.remove('open'); });
+
+document.getElementById('vodFetchBtn').addEventListener('click', fetchVod);
+vodInput.addEventListener('keydown', function(e){ if(e.key === 'Enter') fetchVod(); });
+
+async function fetchVod(){
+  const url = vodInput.value.trim();
+  if(!url){ return; }
+  const prog = document.getElementById('vodProgress');
+  prog.textContent = '불러오는 중…';
+  document.getElementById('vodAdd').disabled = true;
+  try{
+    const res = await fetch('/api/soop-vod?url=' + encodeURIComponent(url));
+    const d = await res.json();
+    if(!d.ok){ throw new Error('VOD 정보를 가져올 수 없어요. URL을 확인해주세요.'); }
+    vodData = d;
+    // 미리보기
+    document.getElementById('vodThumb').src = d.thumb || '';
+    document.getElementById('vodTitle').textContent = d.title || '(제목 없음)';
+    let meta = d.bjNick ? d.bjNick : (d.bjId || '');
+    if(d.duration){ const sec = Math.floor(d.duration/1000); meta += '  ·  ' + Math.floor(sec/60) + ':' + String(sec%60).padStart(2,'0'); }
+    if(d.viewCount) meta += '  ·  조회 ' + Number(d.viewCount).toLocaleString();
+    document.getElementById('vodMeta').textContent = meta;
+    document.getElementById('vodPreview').style.display = 'block';
+    document.getElementById('vodAdd').disabled = false;
+    prog.textContent = '';
+  }catch(e){
+    prog.textContent = e.message;
+    vodData = null;
+  }
+}
+
+document.getElementById('vodAdd').addEventListener('click', async function(){
+  if(!vodData) return;
+  const prog = document.getElementById('vodProgress');
+  prog.textContent = '추가 중…';
+  document.getElementById('vodAdd').disabled = true;
+  try{
+    const ins = await sb.from('archive_items').insert({
+      kind: 'vod',
+      vod_url: vodData.vodUrl,
+      vod_title: vodData.title,
+      thumb_url: vodData.thumb,
+      file_key: 'vod:' + vodData.titleNo,  // NOT NULL 제약 대응 (VOD는 실제 R2 파일 없음)
+      file_type: 'video/vod'
+    });
+    if(ins.error){ throw new Error(ins.error.message); }
+    prog.textContent = '완료!';
+    await loadGallery();
+    setTimeout(function(){ upModal.classList.remove('open'); }, 600);
+  }catch(e){
+    prog.textContent = '실패: ' + e.message;
+    document.getElementById('vodAdd').disabled = false;
+  }
+});
 document.getElementById('upCancel').addEventListener('click', function(){ upModal.classList.remove('open'); });
 upModal.addEventListener('click', function(e){ if(e.target === upModal) upModal.classList.remove('open'); });
 dropZone.addEventListener('click', function(){ fileInput.click(); });

@@ -209,3 +209,9 @@ create policy "public insert archive_likes" on public.archive_likes for insert w
 -- 자기 추천 취소 가능 (토글)
 create policy "public delete archive_likes" on public.archive_likes for delete using (true);
 create index if not exists idx_archive_likes_item on public.archive_likes (item_id);
+
+-- 13) 아카이브에 VOD/클립 지원 (컬럼 추가)
+alter table public.archive_items add column if not exists kind text default 'image';  -- 'image' | 'vod'
+alter table public.archive_items add column if not exists vod_url text;      -- VOD 원본 URL
+alter table public.archive_items add column if not exists vod_title text;    -- VOD 제목
+alter table public.archive_items add column if not exists thumb_url text;    -- 외부 썸네일 URL(VOD용, R2 아님)
