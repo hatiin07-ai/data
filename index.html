@@ -368,7 +368,35 @@ function renderDaysList(){
       badgeText: isOngoing ? '기간중' : null
     };
   });
-  const sorted = dayItems.concat(rangeItems).sort((a,b) => a.sortKey - b.sortKey);
+  // 데뷔일 있는 스트리머마다 다음 100일 단위 기념일 계산
+  const hundredItems = [];
+  Object.values(STREAMERS).forEach(s => {
+    if(!s.debut_date) return;
+    const [dy, dm, dd] = s.debut_date.split('-').map(Number);
+    const debutMid = new Date(dy, dm - 1, dd);
+    const nowMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const daysPassed = Math.floor((nowMid - debutMid) / 86400000);
+    if(daysPassed < 0) return; // 미래 데뷔
+    let milestone = Math.ceil(daysPassed / 100) * 100;
+    if(milestone === 0) milestone = 100;
+    if(milestone <= daysPassed) milestone += 100;
+    const target = new Date(debutMid.getTime() + milestone * 86400000);
+    const tM = target.getMonth() + 1, tD = target.getDate();
+    const key = tM * 100 + tD;
+    const isPast = key < todayKey;
+    const isToday = key === todayKey;
+    hundredItems.push({
+      sortKey: isPast ? key + 10000 : key,
+      dateLabel: `${tM}/${tD}`,
+      name: s.name,
+      color: s.color,
+      typeWord: `${milestone}일`,
+      isHighlight: isToday,
+      badgeText: isToday ? '오늘' : null
+    });
+  });
+
+  const sorted = dayItems.concat(rangeItems).concat(hundredItems).sort((a,b) => a.sortKey - b.sortKey);
 
   const tbody = document.getElementById('daysListBody');
   if(!sorted.length){

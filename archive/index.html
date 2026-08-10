@@ -65,6 +65,7 @@
 
   <div class="toolbar">
     <button class="btn-upload" id="uploadBtn">＋ 업로드</button>
+    <span id="loginStatus" style="display:none;font-size:12px;color:#16a34a">● 로그인 상태</span>
   </div>
 
   <div class="gallery" id="gallery">
@@ -257,6 +258,7 @@ async function checkAdmin(){
   const { data:{ session } } = await sb.auth.getSession();
   isAdmin = !!session;
   document.body.classList.toggle('is-admin', isAdmin);
+  document.getElementById('loginStatus').style.display = isAdmin ? '' : 'none';
 }
 
 // ── 초기화 ─────────────────────────────────────────────────
