@@ -83,7 +83,7 @@
   <div class="up-modal" id="upModal">
     <div class="up-box">
       <h2>이미지 업로드</h2>
-      <div class="hint">webp · gif · png (최대 25MB). 움직이는 이미지는 정지 썸네일이 자동 생성돼요.</div>
+      <div class="hint">webp · gif · png (최대 10MB). 움직이는 이미지는 정지 썸네일이 자동 생성돼요.</div>
       <div class="drop" id="dropZone">
         클릭하거나 파일을 여기로 끌어다 놓으세요
         <input type="file" id="fileInput" accept="image/webp,image/gif,image/png" style="display:none" />
@@ -192,7 +192,7 @@ function resetUpload(){
 const ALLOWED = ['image/webp','image/gif','image/png'];
 async function handleFile(file){
   if(!ALLOWED.includes(file.type)){ alert('webp, gif, png만 업로드할 수 있어요.'); return; }
-  if(file.size > 25*1024*1024){ alert('파일이 너무 커요 (최대 25MB).'); return; }
+  if(file.size > 10*1024*1024){ alert('파일이 너무 커요 (최대 10MB).'); return; }
   selectedFile = file;
   // 미리보기 + 정지 썸네일 생성
   const url = URL.createObjectURL(file);
