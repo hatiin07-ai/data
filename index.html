@@ -45,7 +45,16 @@
     padding:10px 14px; border-radius:18px; border:1px solid var(--line);
     background:var(--card); text-decoration:none; color:var(--ink);
     cursor:pointer; transition:transform .12s ease, box-shadow .12s ease;
+    position:relative;
   }
+  .chip-new{
+    display:none; position:absolute; top:-5px; left:-5px; z-index:2;
+    min-width:18px; height:18px; padding:0 5px; box-sizing:border-box;
+    background:#e0322a; color:#fff; font-size:10px; font-weight:800;
+    border-radius:9px; align-items:center; justify-content:center;
+    border:2px solid var(--paper); line-height:1;
+  }
+  .chip-new.show{ display:inline-flex; }
   .streamer-chip-clickable{ cursor:pointer; }
   .streamer-chip:hover{ transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,0,0,.06); }
   /* 최근글 모달 */
@@ -581,6 +590,7 @@ function renderStreamerStrip(){
     // 클릭하면 최근글 모달 (soop_id 있어야 최근글 조회 가능)
     const clickable = s.soop_id ? ' streamer-chip-clickable' : '';
     return `<div class="streamer-chip${clickable}" id="chip-${s.id}" data-sid="${s.id}" data-soopid="${s.soop_id || ''}" data-name="${(s.name||'').replace(/"/g,'')}" data-station="${stationUrl || ''}">
+      <span class="chip-new" id="new-${s.id}">N</span>
       ${avatarHtml}
       <span class="info">
         <span class="s-name" style="--c1:${s.color}; --c2:${s.color2 || lighten(s.color, 0.42)}; --glow:${withAlpha(s.color, 0.4)}"><span class="g-stroke" aria-hidden="true">${s.name}</span><span class="g-fill">${s.name}</span></span>
@@ -599,6 +609,21 @@ function renderStreamerStrip(){
         if(data.isLive){
           chip.classList.add('on');
           chip.querySelector('.status-word').lastChild.textContent = 'ON AIR';
+        }
+      })
+      .catch(() => {});
+
+    // 최근글이 오늘이면 New 마크 표시
+    fetch(`/api/soop-latest-post?bj=${encodeURIComponent(s.soop_id)}`)
+      .then(r => r.json())
+      .then(d => {
+        if(!d.ok || !d.post || !d.post.regDate) return;
+        const postDate = d.post.regDate.slice(0, 10); // YYYY-MM-DD
+        const now = new Date();
+        const today = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+        if(postDate === today){
+          const badge = document.getElementById('new-'+s.id);
+          if(badge) badge.classList.add('show');
         }
       })
       .catch(() => {});
