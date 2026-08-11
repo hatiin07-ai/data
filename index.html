@@ -46,7 +46,31 @@
     background:var(--card); text-decoration:none; color:var(--ink);
     cursor:pointer; transition:transform .12s ease, box-shadow .12s ease;
   }
+  .streamer-chip-clickable{ cursor:pointer; }
   .streamer-chip:hover{ transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,0,0,.06); }
+  /* 최근글 모달 */
+  .post-modal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:210; align-items:center; justify-content:center; padding:16px; }
+  .post-modal.open{ display:flex; }
+  .post-box{ background:#fff; border-radius:18px; width:100%; max-width:420px; max-height:82vh; display:flex; flex-direction:column; overflow:hidden; }
+  .post-head{ display:flex; align-items:center; justify-content:space-between; padding:18px 20px 12px; }
+  .post-streamer{ font-family:'A2z',sans-serif; font-weight:800; font-size:18px; color:var(--ink); }
+  .post-close{ border:none; background:none; font-size:20px; cursor:pointer; color:#999; padding:0 4px; }
+  .post-body{ padding:0 20px 16px; overflow-y:auto; flex:1; }
+  .post-loading{ text-align:center; color:#b5ada3; font-size:13px; padding:30px 0; }
+  .post-title{ font-weight:700; font-size:15px; color:var(--ink); line-height:1.4; margin-bottom:8px; word-break:break-word; }
+  .post-meta{ font-size:11.5px; color:var(--ink-soft); margin-bottom:12px; display:flex; gap:10px; flex-wrap:wrap; }
+  .post-thumb{ width:100%; border-radius:10px; margin-bottom:12px; display:block; }
+  .post-content{ font-size:13px; color:#5a5149; line-height:1.6; word-break:break-word; }
+  .post-empty{ text-align:center; color:#b5ada3; font-size:13px; padding:20px 0; }
+  .post-actions{ display:flex; gap:8px; padding:14px 20px 18px; border-top:1px solid var(--line); }
+  .post-btn{ flex:1; text-align:center; text-decoration:none; font-family:'A2z',sans-serif; font-weight:700; font-size:14px; padding:13px; border-radius:12px; }
+  .post-btn-station{ background:#f2ece3; color:var(--ink); }
+  .post-btn-live{ background:#e0322a; color:#fff; }
+  @media (max-width:640px){
+    .post-box{ max-width:100%; border-radius:16px; }
+    .post-streamer{ font-size:16px; }
+    .post-btn{ font-size:13px; padding:12px; }
+  }
   .streamer-chip .avatar{
     width:44px; height:44px; border-radius:50%; flex:none; object-fit:cover;
     background:#eee; border:2px solid var(--line);
@@ -314,6 +338,23 @@
   </div>
 
   <!-- 업 요청 등록 모달 -->
+  <!-- 스트리머 최근글 모달 -->
+  <div id="postModal" class="post-modal">
+    <div class="post-box">
+      <div class="post-head">
+        <span class="post-streamer" id="postStreamer">스트리머</span>
+        <button class="post-close" id="postClose">✕</button>
+      </div>
+      <div class="post-body" id="postBody">
+        <div class="post-loading">불러오는 중…</div>
+      </div>
+      <div class="post-actions">
+        <a class="post-btn post-btn-station" id="postStationBtn" href="#" target="_blank" rel="noopener">방송국 바로가기</a>
+        <a class="post-btn post-btn-live" id="postLiveBtn" href="#" target="_blank" rel="noopener">방송 바로가기</a>
+      </div>
+    </div>
+  </div>
+
   <div id="upFormModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:16px">
     <div style="background:#fff;border-radius:18px;max-width:420px;width:100%;padding:24px">
       <h2 id="upfTitle" style="font-size:18px;font-weight:800;margin:0 0 16px">업 요청 등록</h2>
@@ -531,22 +572,21 @@ function renderStreamerStrip(){
   const el = document.getElementById('streamerStrip');
   const streamers = Object.values(STREAMERS);
   el.innerHTML = streamers.map(s => {
-    // 오프라인 기본 링크 = 방송국 URL (없으면 soop_id로 자동 생성)
     const stationUrl = s.channel_url || (s.soop_id ? `https://ch.sooplive.co.kr/${s.soop_id}` : null);
-    const tag = stationUrl ? 'a' : 'span';
-    const hrefAttr = stationUrl ? ` href="${stationUrl}" target="_blank" rel="noopener"` : '';
     const initial = (s.name || '?').charAt(0);
     const avatarHtml = s.soop_id
       ? `<img class="avatar" id="avatar-${s.id}" src="https://profile.img.sooplive.com/LOGO/${s.soop_id.slice(0,2)}/${s.soop_id}/${s.soop_id}.jpg"
            onerror="this.outerHTML='<span class=&quot;avatar-fallback&quot; style=&quot;background:${s.color}&quot;>${initial}</span>'" />`
       : `<span class="avatar-fallback" style="background:${s.color}">${initial}</span>`;
-    return `<${tag} class="streamer-chip" id="chip-${s.id}"${hrefAttr}>
+    // 클릭하면 최근글 모달 (soop_id 있어야 최근글 조회 가능)
+    const clickable = s.soop_id ? ' streamer-chip-clickable' : '';
+    return `<div class="streamer-chip${clickable}" id="chip-${s.id}" data-sid="${s.id}" data-soopid="${s.soop_id || ''}" data-name="${(s.name||'').replace(/"/g,'')}" data-station="${stationUrl || ''}">
       ${avatarHtml}
       <span class="info">
         <span class="s-name" style="--c1:${s.color}; --c2:${s.color2 || lighten(s.color, 0.42)}; --glow:${withAlpha(s.color, 0.4)}"><span class="g-stroke" aria-hidden="true">${s.name}</span><span class="g-fill">${s.name}</span></span>
         <span class="status-word"><span class="live-dot"></span>OFF</span>
       </span>
-    </${tag}>`;
+    </div>`;
   }).join('');
 
   streamers.filter(s => s.soop_id).forEach(s => {
@@ -555,18 +595,75 @@ function renderStreamerStrip(){
       .then(data => {
         const chip = document.getElementById('chip-'+s.id);
         if(!chip) return;
+        chip.dataset.live = data.isLive ? '1' : '0';
         if(data.isLive){
           chip.classList.add('on');
           chip.querySelector('.status-word').lastChild.textContent = 'ON AIR';
-          // 방송 중이면 방송국 대신 시청 페이지로 바로 이동
-          if(chip.tagName === 'A'){
-            chip.href = `https://play.sooplive.com/${s.soop_id}/`;
-          }
         }
       })
       .catch(() => {});
   });
 }
+
+// ── 스트리머 칩 → 최근글 모달 ──────────────────────────────
+(function(){
+  const modal = document.getElementById('postModal');
+  const strip = document.getElementById('streamerStrip');
+  if(!modal || !strip) return;
+
+  strip.addEventListener('click', function(e){
+    const chip = e.target.closest('.streamer-chip-clickable');
+    if(!chip) return;
+    const soopId = chip.dataset.soopid;
+    if(!soopId) return;
+    openPostModal(soopId, chip.dataset.name, chip.dataset.station, chip.dataset.live === '1');
+  });
+
+  async function openPostModal(soopId, name, stationUrl, isLive){
+    document.getElementById('postStreamer').textContent = name;
+    const body = document.getElementById('postBody');
+    body.innerHTML = '<div class="post-loading">불러오는 중…</div>';
+    // 버튼 링크 설정
+    const station = stationUrl || ('https://ch.sooplive.co.kr/' + soopId);
+    document.getElementById('postStationBtn').href = station;
+    const liveBtn = document.getElementById('postLiveBtn');
+    liveBtn.href = 'https://play.sooplive.com/' + soopId + '/';
+    liveBtn.textContent = isLive ? '🔴 방송 바로가기' : '방송 바로가기';
+    modal.classList.add('open');
+
+    try{
+      const res = await fetch('/api/soop-latest-post?bj=' + encodeURIComponent(soopId));
+      const d = await res.json();
+      if(!d.ok){ throw new Error('불러오기 실패'); }
+      if(!d.post){ body.innerHTML = '<div class="post-empty">최근 게시글이 없어요.</div>'; return; }
+      const p = d.post;
+      let meta = [];
+      if(p.regDate) meta.push(p.regDate.slice(0,16));
+      meta.push('👁 ' + (p.readCnt||0));
+      meta.push('💬 ' + (p.commentCnt||0));
+      let html = '';
+      html += '<div class="post-title">' + (p.isNotice ? '📌 ' : '') + esc(p.title || '(제목 없음)') + '</div>';
+      html += '<div class="post-meta">' + meta.map(esc).join(' · ') + '</div>';
+      if(p.thumb) html += '<img class="post-thumb" src="' + esc(p.thumb) + '" onerror="this.style.display=\'none\'" />';
+      if(p.content) html += '<div class="post-content">' + esc(p.content) + '</div>';
+      // 게시글 바로가기도 방송국 버튼을 최근글로 대체할지? → 방송국 버튼은 방송국, 글은 본문에
+      body.innerHTML = html;
+      // 최근글 게시물로 가는 링크를 방송국 버튼에 우선 적용하지 않고, 제목 클릭으로
+      const titleEl = body.querySelector('.post-title');
+      if(titleEl && p.postUrl){
+        titleEl.style.cursor = 'pointer';
+        titleEl.addEventListener('click', function(){ window.open(p.postUrl, '_blank', 'noopener'); });
+      }
+    }catch(err){
+      body.innerHTML = '<div class="post-empty">최근글을 불러오지 못했어요.<br><span style="font-size:11px">' + esc(err.message) + '</span></div>';
+    }
+  }
+
+  function esc(s){ return (s||'').toString().replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  document.getElementById('postClose').addEventListener('click', function(){ modal.classList.remove('open'); });
+  modal.addEventListener('click', function(e){ if(e.target === modal) modal.classList.remove('open'); });
+})();
 
 async function loadData(){
   const sb = initSupabase();
