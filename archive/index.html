@@ -113,6 +113,10 @@
   .channel-tab{ font-family:'A2z',sans-serif; font-weight:700; font-size:15px; padding:10px 22px; border-radius:20px; border:1px solid var(--line); background:var(--card); color:var(--ink-soft); cursor:pointer; }
   .channel-tab.active{ background:var(--accent); color:#fff; border-color:var(--accent); }
   .channel-tab.abyss.active{ background:#6b21a8; border-color:#6b21a8; }
+  .ch-today{ display:none; margin-left:7px; font-size:12px; font-weight:800; background:#e0322a; color:#fff; border-radius:11px; padding:1px 8px; vertical-align:middle; }
+  .ch-today.show{ display:inline-block; }
+  .channel-tab.active .ch-today{ background:rgba(255,255,255,.9); color:var(--accent); }
+  .channel-tab.abyss.active .ch-today{ color:#6b21a8; }
   /* 관리 버튼 */
   .btn-manage{ font-family:'A2z',sans-serif; font-weight:700; font-size:13px; padding:9px 16px; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; }
   .btn-manage.active{ background:#2c2622; color:#fff; border-color:#2c2622; }
@@ -144,8 +148,8 @@
   <div class="sub">누구나 이미지·VOD를 올릴 수 있어요.</div>
 
   <div class="channel-tabs" id="channelTabs">
-    <button class="channel-tab active" data-channel="subculture">🎨 서브컬쳐</button>
-    <button class="channel-tab abyss" data-channel="abyss">🕳️ 심연</button>
+    <button class="channel-tab active" data-channel="subculture">🎨 서브컬쳐<span class="ch-today" id="todaySubculture"></span></button>
+    <button class="channel-tab abyss" data-channel="abyss">🕳️ 심연<span class="ch-today" id="todayAbyss"></span></button>
   </div>
 
   <div class="toolbar">
@@ -323,6 +327,7 @@ async function loadGallery(){
   likes.forEach(function(l){ likeCount[l.item_id] = (likeCount[l.item_id] || 0) + 1; });
   itemsCache = items.map(function(it){ return Object.assign({}, it, { likes: likeCount[it.id] || 0 }); });
   renderGallery();
+  updateTodayCounts(); // 오늘 개수 배지 갱신
 }
 
 function renderGallery(){
@@ -925,6 +930,30 @@ async function checkAdmin(){
 }
 
 // ── 초기화 ─────────────────────────────────────────────────
+// 오늘(자정~) 채널별 업로드 개수 배지 갱신
+async function updateTodayCounts(){
+  // 오늘 0시 (로컬) 이후
+  const now = new Date();
+  const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const iso = midnight.toISOString();
+  try{
+    const res = await sb.from('archive_items').select('channel, created_at').gte('created_at', iso);
+    const rows = res.data || [];
+    let sub = 0, ab = 0;
+    rows.forEach(function(r){
+      if(r.channel === 'abyss') ab++; else sub++;
+    });
+    setTodayBadge('todaySubculture', sub);
+    setTodayBadge('todayAbyss', ab);
+  }catch(e){}
+}
+function setTodayBadge(id, count){
+  const el = document.getElementById(id);
+  if(!el) return;
+  if(count > 0){ el.textContent = '+' + count; el.classList.add('show'); }
+  else { el.textContent = ''; el.classList.remove('show'); }
+}
+
 (async function(){
   await checkAdmin();
   await loadGallery();
