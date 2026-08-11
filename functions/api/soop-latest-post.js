@@ -17,9 +17,11 @@ export async function onRequestGet({ request }) {
     if (!res.ok) return json({ ok: false, error: 'not found' }, 200);
     const data = await res.json();
     const posts = Array.isArray(data.posts) ? data.posts : [];
-    if (!posts.length) return json({ ok: true, post: null });
+    // 스트리머 본인이 작성한 글만 (게시판엔 시청자/매니저 글도 섞임 → userId로 판별)
+    const ownPosts = posts.filter(p => p.userId === bj);
+    if (!ownPosts.length) return json({ ok: true, post: null });
 
-    const latest = posts.reduce((a, b) => (b.titleNo > a.titleNo ? b : a));
+    const latest = ownPosts.reduce((a, b) => (b.titleNo > a.titleNo ? b : a));
     return json({
       ok: true,
       post: {
