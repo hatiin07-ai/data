@@ -451,9 +451,9 @@ function renderDaysList(){
     // 당일을 1일차로 계산 (데뷔 당일 = 1일)
     const currentDay = Math.floor((nowMid - debutMid) / 86400000) + 1;
     if(currentDay < 1) return; // 미래 데뷔
-    // 다음 100일 단위 (오늘이 딱 100단위면 그 다음)
+    // 다음 100일 단위. 오늘이 딱 100단위 당일이면 오늘 것을 표시(하이라이팅), 지났으면 다음 단위로
     let milestone = Math.ceil(currentDay / 100) * 100;
-    if(milestone <= currentDay) milestone += 100;
+    if(milestone < currentDay) milestone += 100;
     // N일차 날짜 = 데뷔일 + (N-1)일
     const target = new Date(debutMid.getTime() + (milestone - 1) * 86400000);
     const tM = target.getMonth() + 1, tD = target.getDate();
