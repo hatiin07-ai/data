@@ -387,7 +387,7 @@ function renderGallery(){
     const isVod = it.kind === 'vod';
     const selCls = selectedIds.has(it.id) ? ' selected' : '';
     const selectableCls = manageMode ? ' selectable' : '';
-    const seenCls = (!manageMode && !isSeen(it.id)) ? ' unseen' : ''; // 안 본 것 블러 (관리 모드에선 해제)
+    const seenCls = (!manageMode && !isAdmin && !isSeen(it.id)) ? ' unseen' : ''; // 안 본 것 블러 (관리 모드/관리자는 해제)
     const selCheck = '<span class="sel-check">' + (selectedIds.has(it.id) ? '✓' : '') + '</span>';
     if(isVod){
       const thumb = it.thumb_url || '';
