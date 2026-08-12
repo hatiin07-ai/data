@@ -231,6 +231,60 @@
 </head>
 <body>
 
+  <!-- 접속 비밀번호 게이트 -->
+  <div id="gate" style="position:fixed;inset:0;z-index:9999;background:var(--paper);display:flex;align-items:center;justify-content:center;padding:20px">
+    <div style="width:100%;max-width:340px;text-align:center">
+      <div style="font-size:44px;margin-bottom:14px">🔒</div>
+      <div style="font-family:'A2z',sans-serif;font-weight:800;font-size:22px;color:var(--ink);margin-bottom:8px">버추얼 캘린더</div>
+      <div style="font-size:13px;color:var(--ink-soft);margin-bottom:24px">비밀번호를 입력해주세요</div>
+      <input type="password" id="gateInput" inputmode="numeric" placeholder="비밀번호" autocomplete="off"
+        style="width:100%;height:50px;border:1px solid var(--line);border-radius:14px;padding:0 16px;font-size:16px;font-family:inherit;box-sizing:border-box;text-align:center;letter-spacing:2px" />
+      <button id="gateBtn" style="width:100%;height:50px;margin-top:12px;border:none;border-radius:14px;background:var(--ink);color:#fff;font-family:'A2z',sans-serif;font-weight:700;font-size:16px;cursor:pointer">입장</button>
+      <div id="gateMsg" style="font-size:12.5px;color:#c0392b;margin-top:12px;min-height:16px"></div>
+    </div>
+  </div>
+  <script>
+  (function(){
+    // 접속 비밀번호 게이트 (SHA-256 해시 비교). 비번 바꾸려면 아래 GATE_HASH 교체.
+    const GATE_HASH = '6e65b61d030e5ac6492802c6f619a63006e5b0e2cafc0170ab92a68083162528';
+    const STORE_KEY = 'gate_ok';
+    const gate = document.getElementById('gate');
+    const input = document.getElementById('gateInput');
+    const msg = document.getElementById('gateMsg');
+
+    async function sha256(str){
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+    function unlock(){ gate.style.display = 'none'; document.body.style.overflow = ''; }
+
+    // 이미 인증돼 있고, 저장된 값이 현재 해시와 같으면 통과 (비번 바뀌면 재인증)
+    if(localStorage.getItem(STORE_KEY) === GATE_HASH){
+      unlock();
+    } else {
+      document.body.style.overflow = 'hidden';
+      setTimeout(() => input.focus(), 100);
+    }
+
+    async function tryUnlock(){
+      const val = input.value.trim();
+      if(!val){ return; }
+      const h = await sha256(val);
+      if(h === GATE_HASH){
+        localStorage.setItem(STORE_KEY, GATE_HASH);
+        msg.textContent = '';
+        unlock();
+      } else {
+        msg.textContent = '비밀번호가 올바르지 않아요.';
+        input.value = '';
+        input.focus();
+      }
+    }
+    document.getElementById('gateBtn').addEventListener('click', tryUnlock);
+    input.addEventListener('keydown', function(e){ if(e.key === 'Enter') tryUnlock(); });
+  })();
+  </script>
+
   <div id="pwaBar" style="display:none;justify-content:center;padding:10px 12px 0">
     <button id="pwaInstallBtn" style="font-family:'A2z',sans-serif;font-weight:700;font-size:14px;color:#fff;background:#ed83a8;border:none;border-radius:22px;padding:10px 20px;cursor:pointer;box-shadow:0 3px 10px rgba(237,131,168,.35);display:flex;align-items:center;gap:7px">
       📲 앱으로 설치하기
