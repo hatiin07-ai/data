@@ -3,13 +3,14 @@
 // R2에 저장하고 저장된 키를 반환. Supabase 메타데이터 기록은 클라이언트가 담당.
 // ⚠️ R2 바인딩(env.ARCHIVE_BUCKET)은 나중에 연결. 없으면 503 반환.
 
-const ALLOWED = ['image/webp', 'image/gif', 'image/png'];
+const ALLOWED = ['image/webp', 'image/gif', 'image/png', 'image/jpeg'];
 const MAX_SIZE = 20 * 1024 * 1024; // 20MB
 
 function extOf(type) {
   if (type === 'image/webp') return 'webp';
   if (type === 'image/gif') return 'gif';
   if (type === 'image/png') return 'png';
+  if (type === 'image/jpeg') return 'jpg';
   return 'bin';
 }
 function randKey(prefix, ext) {

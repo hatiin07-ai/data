@@ -269,10 +269,10 @@
 
       <!-- 이미지 탭 -->
       <div class="up-pane" id="paneImage">
-        <div class="hint">webp · gif · png (각 최대 20MB). 여러 개를 한 번에 올릴 수 있어요. 움직이는 이미지는 정지 썸네일이 자동 생성돼요.</div>
+        <div class="hint">webp · gif · png · jpg (각 최대 20MB). 여러 개를 한 번에 올릴 수 있어요. 움직이는 이미지는 정지 썸네일이 자동 생성돼요.</div>
         <div class="drop" id="dropZone">
           클릭하거나 파일을 여기로 끌어다 놓으세요<br><small style="color:#b5ada3">여러 개 선택 · Ctrl+V 붙여넣기 가능</small>
-          <input type="file" id="fileInput" accept="image/webp,image/gif,image/png" multiple style="display:none" />
+          <input type="file" id="fileInput" accept="image/webp,image/gif,image/png,image/jpeg" multiple style="display:none" />
         </div>
         <div class="preview-list" id="previewList" style="display:none"></div>
         <div class="up-actions">
@@ -842,7 +842,7 @@ function resetUpload(){
   fileInput.value = '';
 }
 
-const ALLOWED = ['image/webp','image/gif','image/png'];
+const ALLOWED = ['image/webp','image/gif','image/png','image/jpeg'];
 async function addFiles(fileList){
   const files = Array.prototype.slice.call(fileList || []);
   for(const file of files){
