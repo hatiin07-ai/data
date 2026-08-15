@@ -142,6 +142,9 @@
   .up-row .up-dday.soon{ color:#e0322a; }
   .up-row .up-info{ flex:1; min-width:0; }
   .up-row .up-nick{ font-weight:700; font-size:15px; color:var(--ink); }
+  .up-live-rank{ margin-left:8px; }
+  .rank-pill{ font-size:12px; font-weight:800; background:#ecfbff; color:#0891b2; border-radius:9px; padding:2px 9px; white-space:nowrap; }
+  .rank-pill-none{ background:#f2ece3; color:#a09890; }
   .up-row .up-goal{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
   .up-row .up-actions{ flex:none; display:flex; gap:6px; }
   .up-row .up-btn{ border:none; border-radius:9px; padding:8px 12px; font-family:'A2z',sans-serif; font-weight:700; font-size:12.5px; cursor:pointer; }
@@ -917,12 +920,11 @@ tabLinks.forEach(btn => {
     listBody.innerHTML = rows.map(function(r){
       const dd = ddayText(r.deadline);
       const isExpired = dd.cls === 'expired';
-      const goalPart = r.goal ? '<div class="up-goal">🎯 ' + esc(r.goal) + '</div>' : '';
       const deadlinePart = r.deadline ? ' · ' + r.deadline : '';
       return '<div class="up-row ' + (isExpired?'expired':'') + '">' +
         '<div class="up-dday ' + dd.cls + '">' + dd.text + '</div>' +
         '<div class="up-info">' +
-          '<div class="up-nick">' + esc(r.streamer_nick) + '</div>' +
+          '<div class="up-nick">' + esc(r.streamer_nick) + '<span class="up-live-rank" id="uprank-' + r.id + '"></span></div>' +
           '<div class="up-goal">' + (r.goal ? '🎯 ' + esc(r.goal) : '업 요청') + deadlinePart + '</div>' +
         '</div>' +
         '<div class="up-actions">' +
@@ -934,6 +936,22 @@ tabLinks.forEach(btn => {
       '</div>';
     }).join('');
     applyAdminVisibility();
+    // 각 요청의 대상 현재 순위/UP 조회해서 배지에 표시
+    rows.forEach(function(r){
+      if(!r.bj_id || !r.post_no || !r.streamer_nick) return;
+      fetch('/api/soop-comments?bj=' + encodeURIComponent(r.bj_id) + '&post=' + encodeURIComponent(r.post_no) + '&target=' + encodeURIComponent(r.streamer_nick))
+        .then(function(res){ return res.json(); })
+        .then(function(d){
+          const el = document.getElementById('uprank-' + r.id);
+          if(!el) return;
+          if(d.ok && d.matched){
+            el.innerHTML = '<span class="rank-pill">' + d.matched.rank + '등 · 👍' + d.matched.likeCnt + '</span>';
+          } else if(d.ok){
+            el.innerHTML = '<span class="rank-pill rank-pill-none">순위 없음</span>';
+          }
+        })
+        .catch(function(){});
+    });
   }
 
   function esc(s){ return (s||'').replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }

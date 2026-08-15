@@ -9,11 +9,11 @@ export async function onRequestGet({ request }) {
   const url = new URL(request.url);
   const bj = (url.searchParams.get('bj') || '').trim();
   const post = (url.searchParams.get('post') || '').trim();
+  const target = (url.searchParams.get('target') || '').trim(); // 대상 닉네임 또는 아이디
   if (!bj || !post) return json({ error: 'bj and post required' }, 400);
 
   try {
     let all = [];
-    let postTitle = '';
     for (let page = 1; page <= MAX_PAGES; page++) {
       const api = `https://api-channel.sooplive.com/v1.1/channel/${encodeURIComponent(bj)}/post/${encodeURIComponent(post)}/comment?page=${page}&orderBy=reg_date&cCommentNo=0`;
       const res = await fetch(api, {
@@ -46,12 +46,23 @@ export async function onRequestGet({ request }) {
       .sort((a, b) => b.likeCnt - a.likeCnt)
       .map((c, i) => Object.assign(c, { rank: i + 1 }));
 
+    // 대상 찾기 (아이디 정확 → 닉네임 정확 → 닉네임 부분일치)
+    let matched = null;
+    if (target) {
+      const t = target.toLowerCase();
+      matched = ranked.find(c => c.id.toLowerCase() === t)
+        || ranked.find(c => c.nick.toLowerCase() === t)
+        || ranked.find(c => c.nick.toLowerCase().includes(t))
+        || null;
+    }
+
     return json({
       ok: true,
       bj: bj,
       post: post,
       total: ranked.length,
-      comments: ranked
+      comments: ranked,
+      matched: matched  // 대상의 순위/UP (없으면 null)
     });
   } catch (e) {
     return json({ error: String(e), ok: false }, 200);
