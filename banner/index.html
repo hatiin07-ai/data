@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOOP 배너 자르기 — 플로팅 / 하단 6분할</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{
+  --mat:#0F1A18; --mat-2:#162523; --panel:#1B2E2B;
+  --line:#294541; --line-soft:#203935;
+  --ink:#E9F2EE; --muted:#7C9B94;
+  --amber:#FFC24D; --amber-dim:#8A6A24;
+  --danger:#FF7A6E; --ok:#63D3A6;
+  --mono:'IBM Plex Mono', ui-monospace, monospace;
+  --sans:'Pretendard Variable', Pretendard, system-ui, -apple-system, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--mat);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 72px}
+
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:22px}
+h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.02em}
+h1 .dim{color:var(--muted);font-weight:500}
+.sub{margin:6px 0 0;color:var(--muted);font-size:13px}
+.legal{font-family:var(--mono);font-size:11px;color:var(--amber-dim);border:1px solid var(--line);border-radius:4px;padding:6px 10px;letter-spacing:.02em}
+
+.tabs{display:flex;border-bottom:1px solid var(--line);margin-bottom:20px}
+.tab{appearance:none;background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);font-family:var(--sans);font-size:14px;font-weight:600;padding:12px 18px 11px;cursor:pointer;display:flex;align-items:baseline;gap:9px;margin-bottom:-1px;transition:color .15s,border-color .15s}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--amber)}
+.tab .dims{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.03em}
+.tab[aria-selected="true"] .dims{color:var(--amber)}
+.tab:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:3px}
+
+.drop{border:1px dashed var(--line);border-radius:6px;background:var(--mat-2);padding:60px 24px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+.drop:hover,.drop.over{border-color:var(--amber);background:#182927}
+.drop h2{margin:0 0 6px;font-size:17px;font-weight:600}
+.drop p{margin:0;color:var(--muted);font-size:13px}
+.drop .key{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-radius:3px;padding:1px 5px;color:var(--ink)}
+.drop:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
+
+.editor{display:grid;grid-template-columns:minmax(0,1fr) 296px;gap:24px;align-items:start}
+@media (max-width:900px){.editor{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+
+.card{background:var(--panel);border:1px solid var(--line-soft);border-radius:6px;padding:16px}
+.card.mat{background:var(--mat-2)}
+.card h3{margin:0 0 12px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.card h3 em{font-style:normal;text-transform:none;letter-spacing:0;color:var(--amber-dim)}
+
+.matgrid{display:grid;grid-template-columns:22px 1fr;grid-template-rows:22px 1fr;justify-content:center}
+canvas.ruler{display:block}
+.stage-hold{position:relative;background-image:linear-gradient(var(--line-soft) 1px,transparent 1px),linear-gradient(90deg,var(--line-soft) 1px,transparent 1px);background-size:20px 20px;background-color:#0B1413}
+#stage{display:block;cursor:grab;touch-action:none}
+#stage:active{cursor:grabbing}
+.stage-hold:focus-within{outline:2px solid var(--amber);outline-offset:3px}
+.frame{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.55)}
+.frame::before,.frame::after{content:"";position:absolute;width:14px;height:14px;border:2px solid var(--amber)}
+.frame::before{top:-1px;left:-1px;border-right:0;border-bottom:0}
+.frame::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+
+.controls{display:flex;align-items:center;gap:14px;margin-top:16px;flex-wrap:wrap}
+.zoom{display:flex;align-items:center;gap:10px;flex:1;min-width:200px}
+.zoom label{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.05em}
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:2px;background:var(--line);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--amber);cursor:pointer;border:0}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--amber);cursor:pointer;border:0}
+input[type=range]:focus-visible{outline:2px solid var(--amber);outline-offset:4px}
+.zoomval{font-family:var(--mono);font-size:12px;min-width:46px;text-align:right}
+
+button.ghost{appearance:none;background:none;border:1px solid var(--line);border-radius:4px;color:var(--ink);font-family:var(--sans);font-size:12.5px;padding:7px 12px;cursor:pointer;transition:border-color .15s,color .15s}
+button.ghost:hover{border-color:var(--amber);color:var(--amber)}
+button.ghost:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+.preview-hold{display:flex;justify-content:center;background:conic-gradient(#22302e 90deg,#1a2725 90deg 180deg,#22302e 180deg 270deg,#1a2725 270deg) 0 0/12px 12px;border:1px solid var(--line);padding:14px;border-radius:4px}
+#preview{display:block;max-width:100%;height:auto}
+.pv-note{margin:9px 0 0;font-family:var(--mono);font-size:10.5px;color:var(--muted);text-align:center;letter-spacing:.03em}
+
+dl.spec{margin:0;display:grid;grid-template-columns:auto 1fr;gap:7px 14px;font-size:12.5px}
+dl.spec dt{color:var(--muted)}
+dl.spec dd{margin:0;font-family:var(--mono);text-align:right;font-size:12px}
+dd.warn{color:var(--danger)}
+dd.ok{color:var(--ok)}
+
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-bottom:12px}
+.seg button{flex:1;appearance:none;background:none;border:0;color:var(--muted);font-family:var(--mono);font-size:11.5px;padding:8px 4px;cursor:pointer;transition:background .15s,color .15s;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--amber);color:#1A1305;font-weight:600}
+.seg button:focus-visible{outline:2px solid var(--amber);outline-offset:-2px}
+.seg-label{font-family:var(--mono);font-size:10.5px;color:var(--muted);letter-spacing:.08em;margin:0 0 6px}
+
+button.primary{width:100%;appearance:none;border:0;border-radius:4px;background:var(--amber);color:#1A1305;font-family:var(--sans);font-weight:700;font-size:14px;padding:12px;cursor:pointer;transition:filter .15s}
+button.primary:hover{filter:brightness(1.08)}
+button.primary:disabled{opacity:.45;cursor:not-allowed}
+button.primary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+button.wide{width:100%;margin-top:8px}
+
+.pieces{margin:12px 0 0;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.pc{border:1px solid var(--line);border-radius:3px;padding:5px 4px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--muted)}
+.pc b{display:block;color:var(--ink);font-size:11px;font-weight:500}
+.pc.over{border-color:var(--danger)}
+.pc.over b{color:var(--danger)}
+
+.msg{margin:10px 0 0;font-size:12px;color:var(--muted);line-height:1.45}
+.msg.bad{color:var(--danger)}
+.hidden{display:none !important}
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>SOOP 배너 자르기 <span class="dim">/ 플로팅 · 하단 6분할</span></h1>
+    <p class="sub">이미지 한 장 올려두고 탭만 바꾸면 돼. 하단은 1440×450 한 판을 잡아서 720×150짜리 6장으로 잘라 내려받는다.</p>
+  </div>
+  <div class="legal">조각당 MAX 200KB · JPG / PNG</div>
+</header>
+
+<div class="tabs" role="tablist">
+  <button class="tab" role="tab" aria-selected="true" data-key="floating">플로팅 배너 <span class="dims">80 × 209</span></button>
+  <button class="tab" role="tab" aria-selected="false" data-key="bottom">하단 배너 <span class="dims">720 × 150 × 6</span></button>
+</div>
+
+<div class="drop" id="drop" tabindex="0" role="button" aria-label="이미지 열기">
+  <h2>이미지를 여기에 놓거나 클릭해서 열기</h2>
+  <p><span class="key">Ctrl</span> + <span class="key">V</span> 로 붙여넣기도 돼요 · JPG, PNG, GIF, WebP</p>
+</div>
+<input type="file" id="file" accept="image/*" class="hidden">
+
+<div class="editor hidden" id="editor">
+  <div class="col">
+    <div class="card mat">
+      <div class="matgrid">
+        <canvas id="corner" width="22" height="22"></canvas>
+        <canvas id="rulerTop" class="ruler"></canvas>
+        <canvas id="rulerLeft" class="ruler"></canvas>
+        <div class="stage-hold" id="stageHold">
+          <canvas id="stage" tabindex="0" aria-label="자를 영역 조절: 드래그로 이동, 휠로 확대"></canvas>
+          <div class="frame"></div>
+        </div>
+      </div>
+      <div class="controls">
+        <div class="zoom">
+          <label for="zoom">ZOOM</label>
+          <input type="range" id="zoom" min="100" max="600" value="100">
+          <span class="zoomval" id="zoomval">100%</span>
+        </div>
+        <button class="ghost" id="btnFit">꽉 채우기</button>
+        <button class="ghost" id="btnChange">다른 이미지</button>
+      </div>
+      <p class="msg" id="stageMsg">드래그로 위치 잡고, 휠이나 슬라이더로 확대해. 방향키 1px, Shift+방향키 10px.</p>
+    </div>
+
+    <div class="card">
+      <h3>업로드 후 붙었을 때 <em id="pvKind">조각 사이 여백까지 반영</em></h3>
+      <div class="preview-hold"><canvas id="preview"></canvas></div>
+      <p class="pv-note" id="pvNote"></p>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="card" id="cardSplit">
+      <h3>분할 방식</h3>
+      <div class="seg" role="group" aria-label="분할 방식">
+        <button data-split="2x3" aria-pressed="true">2 × 3</button>
+        <button data-split="1x6" aria-pressed="false">1 × 6</button>
+        <button data-split="1x1" aria-pressed="false">1장</button>
+      </div>
+      <p class="msg" id="splitMsg" style="margin-top:0"></p>
+    </div>
+
+    <div class="card">
+      <h3>저장</h3>
+      <p class="seg-label">파일 형식</p>
+      <div class="seg" role="group" aria-label="파일 형식">
+        <button data-fmt="jpg" aria-pressed="true">JPG</button>
+        <button data-fmt="png" aria-pressed="false">PNG</button>
+      </div>
+      <dl class="spec">
+        <dt>크롭 판</dt><dd id="sOut">—</dd>
+        <dt>조각 크기</dt><dd id="sPiece">—</dd>
+        <dt>원본</dt><dd id="sSrc">—</dd>
+      </dl>
+      <div class="pieces" id="pieceList"></div>
+      <button class="primary wide" id="btnSave">저장</button>
+      <button class="ghost wide" id="btnSaveAll">플로팅까지 전부 ZIP</button>
+      <p class="msg" id="saveMsg"></p>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+(function(){
+'use strict';
+
+const LIMIT = 200 * 1024;
+const GAP = 8; // 미리보기에서 조각 사이 여백(표시용)
+
+const SPLITS = {
+  '2x3': { cols:2, rows:3 },
+  '1x6': { cols:1, rows:6 },
+  '1x1': { cols:1, rows:1 }
+};
+
+const state = {
+  active:'floating',
+  img:null, srcName:'banner', isGif:false,
+  fmt:'jpg', split:'2x3',
+  tf:{}
+};
+
+const $ = id => document.getElementById(id);
+const stage = $('stage'), sctx = stage.getContext('2d');
+const preview = $('preview'), pctx = preview.getContext('2d');
+const rTop = $('rulerTop'), rLeft = $('rulerLeft'), corner = $('corner');
+const dpr = Math.min(window.devicePixelRatio || 1, 2);
+let viewScale = 1;
+
+/* ---------- preset ---------- */
+function preset(){
+  if (state.active === 'floating')
+    return { key:'floating|1x1', cw:80, ch:209, cols:1, rows:1, w:80, h:209 };
+  const s = SPLITS[state.split];
+  return { key:'bottom|'+state.split, cw:720, ch:150, cols:s.cols, rows:s.rows, w:720*s.cols, h:150*s.rows };
+}
+function pieceCount(p){ return p.cols * p.rows; }
+
+/* ---------- utils ---------- */
+function setupCanvas(cv, ctx, cssW, cssH){
+  cv.style.width = cssW+'px'; cv.style.height = cssH+'px';
+  cv.width = Math.round(cssW*dpr); cv.height = Math.round(cssH*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+const fmtBytes = b => b<1024 ? b+' B' : b<1048576 ? (b/1024).toFixed(0)+' KB' : (b/1048576).toFixed(2)+' MB';
+const coverScale = p => Math.max(p.w/state.img.naturalWidth, p.h/state.img.naturalHeight);
+
+function tf(){ 
+  const p = preset();
+  if (!state.tf[p.key]) fitCover(p);
+  return state.tf[p.key];
+}
+function fitCover(p){
+  const s = coverScale(p);
+  state.tf[p.key] = {
+    scale:s,
+    x:(p.w - state.img.naturalWidth*s)/2,
+    y:(p.h - state.img.naturalHeight*s)/2
+  };
+}
+function clampTf(p){
+  const t = state.tf[p.key], min = coverScale(p);
+  if (t.scale < min) t.scale = min;
+  const iw = state.img.naturalWidth*t.scale, ih = state.img.naturalHeight*t.scale;
+  t.x = Math.min(0, Math.max(p.w-iw, t.x));
+  t.y = Math.min(0, Math.max(p.h-ih, t.y));
+}
+
+/* ---------- draw ---------- */
+function drawSource(ctx, p, t, scale, offX, offY){
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(state.img,
+    (t.x - offX)*scale, (t.y - offY)*scale,
+    state.img.naturalWidth*t.scale*scale,
+    state.img.naturalHeight*t.scale*scale);
+}
+function computeViewScale(){
+  const p = preset();
+  const box = document.querySelector('.card.mat');
+  const availW = Math.max(220, (box ? box.clientWidth : 700) - 32 - 22);
+  let vs = Math.min(availW/p.w, 420/p.h);
+  vs = Math.min(vs, p.w < 200 ? 3 : 1);
+  viewScale = Math.max(0.15, vs);
+}
+function render(){
+  if (!state.img) return;
+  const p = preset(), t = tf();
+  setupCanvas(stage, sctx, p.w*viewScale, p.h*viewScale);
+  sctx.clearRect(0,0,p.w*viewScale,p.h*viewScale);
+  drawSource(sctx, p, t, viewScale, 0, 0);
+
+  // 잘리는 경계선
+  if (pieceCount(p) > 1){
+    sctx.save();
+    sctx.setLineDash([6,5]); sctx.lineWidth = 1;
+    sctx.strokeStyle = 'rgba(255,194,77,.95)';
+    sctx.beginPath();
+    for (let c=1;c<p.cols;c++){ const x=Math.round(c*p.cw*viewScale)+.5; sctx.moveTo(x,0); sctx.lineTo(x,p.h*viewScale); }
+    for (let r=1;r<p.rows;r++){ const y=Math.round(r*p.ch*viewScale)+.5; sctx.moveTo(0,y); sctx.lineTo(p.w*viewScale,y); }
+    sctx.stroke();
+    sctx.restore();
+  }
+  drawRulers();
+  drawPreview();
+  syncUI();
+  queueSize();
+}
+
+function drawPreview(){
+  const p = preset(), t = tf();
+  const gap = pieceCount(p) > 1 ? GAP : 0;
+  const W = p.w + gap*(p.cols-1), H = p.h + gap*(p.rows-1);
+  preview.width = W; preview.height = H;
+  preview.style.width = Math.min(W, 100000)+'px';
+  pctx.setTransform(1,0,0,1,0,0);
+  pctx.clearRect(0,0,W,H);
+  for (let r=0;r<p.rows;r++) for (let c=0;c<p.cols;c++){
+    const sx = c*p.cw, sy = r*p.ch;
+    const dx = c*(p.cw+gap), dy = r*(p.ch+gap);
+    pctx.save();
+    pctx.beginPath(); pctx.rect(dx,dy,p.cw,p.ch); pctx.clip();
+    pctx.translate(dx - sx, dy - sy);
+    drawSource(pctx, p, t, 1, 0, 0);
+    pctx.restore();
+    if (pieceCount(p) > 1){
+      const n = r*p.cols + c + 1;
+      pctx.save();
+      pctx.fillStyle = 'rgba(15,26,24,.82)';
+      pctx.fillRect(dx+6, dy+6, 26, 20);
+      pctx.fillStyle = '#FFC24D';
+      pctx.font = '600 13px "IBM Plex Mono", monospace';
+      pctx.textAlign='center'; pctx.textBaseline='middle';
+      pctx.fillText(String(n), dx+19, dy+17);
+      pctx.restore();
+    }
+  }
+  const holdW = preview.parentElement.clientWidth - 28;
+  const shown = Math.min(1, holdW / W);
+  preview.style.width = Math.round(W*shown)+'px';
+  $('pvNote').textContent = pieceCount(p) > 1
+    ? `${p.cw} × ${p.ch} × ${pieceCount(p)}장 · 화면 표시 ${Math.round(shown*100)}%`
+    : `${p.cw} × ${p.ch} px · 화면 표시 ${Math.round(shown*100)}%`;
+}
+
+/* ---------- rulers ---------- */
+function pickStep(){
+  for (const s of [5,10,20,25,50,100,200,500,1000]) if (s*viewScale >= 44) return s;
+  return 1000;
+}
+function drawRulers(){
+  const p = preset(), W = p.w*viewScale, H = p.h*viewScale;
+  const step = pickStep(), minor = step/5;
+  setupCanvas(rTop, rTop.getContext('2d'), W, 22);
+  setupCanvas(rLeft, rLeft.getContext('2d'), 22, H);
+  setupCanvas(corner, corner.getContext('2d'), 22, 22);
+  const paint = (ctx, len, horiz, total) => {
+    ctx.clearRect(0,0,horiz?len:22,horiz?22:len);
+    ctx.fillStyle='#162523'; ctx.fillRect(0,0,horiz?len:22,horiz?22:len);
+    ctx.font='9px "IBM Plex Mono", monospace'; ctx.textBaseline='alphabetic'; ctx.textAlign='left';
+    if (minor*viewScale >= 5){
+      ctx.strokeStyle='#294541'; ctx.lineWidth=1; ctx.beginPath();
+      for (let v=0; v<=total; v+=minor){
+        const px = Math.round(v*viewScale)+.5;
+        if (horiz){ ctx.moveTo(px,17); ctx.lineTo(px,22); } else { ctx.moveTo(17,px); ctx.lineTo(22,px); }
+      }
+      ctx.stroke();
+    }
+    ctx.strokeStyle='#FFC24D'; ctx.fillStyle='#7C9B94'; ctx.beginPath();
+    for (let v=0; v<=total; v+=step){
+      const px = Math.min(Math.round(v*viewScale), (horiz?len:len)-1)+.5;
+      if (horiz){ ctx.moveTo(px,12); ctx.lineTo(px,22); ctx.fillText(String(v), Math.min(px+3, len-20), 10); }
+      else { ctx.moveTo(12,px); ctx.lineTo(22,px); ctx.save(); ctx.translate(10, Math.min(px+3, len-4)); ctx.rotate(-Math.PI/2); ctx.fillText(String(v),0,0); ctx.restore(); }
+    }
+    ctx.stroke();
+  };
+  paint(rTop.getContext('2d'), W, true, p.w);
+  paint(rLeft.getContext('2d'), H, false, p.h);
+  const c = corner.getContext('2d');
+  c.clearRect(0,0,22,22); c.fillStyle='#162523'; c.fillRect(0,0,22,22);
+  c.fillStyle='#FFC24D'; c.font='8px "IBM Plex Mono", monospace'; c.fillText('px',5,14);
+}
+
+/* ---------- UI sync ---------- */
+function syncUI(){
+  const p = preset(), t = tf();
+  const pct = Math.round(t.scale/coverScale(p)*100);
+  $('zoom').value = Math.min(600, Math.max(100, pct));
+  $('zoomval').textContent = pct+'%';
+  $('sOut').textContent = p.w+' × '+p.h;
+  $('sPiece').textContent = pieceCount(p) > 1 ? `${p.cw} × ${p.ch} · ${pieceCount(p)}장` : `${p.cw} × ${p.ch} · 1장`;
+  $('cardSplit').classList.toggle('hidden', state.active !== 'bottom');
+  $('btnSave').textContent = pieceCount(p) > 1 ? `${pieceCount(p)}장 ZIP으로 저장` : '이 배너 저장';
+  $('pvKind').textContent = pieceCount(p) > 1 ? '조각 사이 여백까지 반영' : '실제 크기';
+  $('splitMsg').textContent = state.split === '2x3'
+    ? '가로 2장 × 세로 3줄. 번호 순서대로 등록하면 한 장으로 이어져.'
+    : state.split === '1x6' ? '세로로 6줄. 폭 720 그대로 쓰는 배치.' : '나누지 않고 720×150 한 장만 만들기.';
+}
+
+/* ---------- zoom ---------- */
+function zoomAt(f, cx, cy){
+  const p = preset(), t = tf(), min = coverScale(p);
+  const ix = (cx-t.x)/t.scale, iy = (cy-t.y)/t.scale;
+  t.scale = Math.max(min, Math.min(min*6, t.scale*f));
+  t.x = cx - ix*t.scale; t.y = cy - iy*t.scale;
+  clampTf(p); render();
+}
+
+/* ---------- export ---------- */
+const toBlob = (cv,type,q) => new Promise(r => cv.toBlob(r,type,q));
+async function buildPiece(p, idx, fmt){
+  const c = idx % p.cols, r = Math.floor(idx / p.cols);
+  const cv = document.createElement('canvas');
+  cv.width = p.cw; cv.height = p.ch;
+  const ctx = cv.getContext('2d');
+  if (fmt === 'jpg'){ ctx.fillStyle='#fff'; ctx.fillRect(0,0,p.cw,p.ch); }
+  ctx.translate(-c*p.cw, -r*p.ch);
+  drawSource(ctx, p, state.tf[p.key], 1, 0, 0);
+  if (fmt === 'png'){
+    const b = await toBlob(cv,'image/png');
+    return { blob:b, ext:'png', quality:null };
+  }
+  let last = null;
+  for (const q of [0.92,0.85,0.78,0.7,0.6,0.5,0.4,0.3]){
+    last = await toBlob(cv,'image/jpeg',q);
+    if (last.size <= LIMIT) return { blob:last, ext:'jpg', quality:q };
+  }
+  return { blob:last, ext:'jpg', quality:0.3 };
+}
+async function buildAll(p, fmt){
+  const out = [];
+  for (let i=0;i<pieceCount(p);i++) out.push(await buildPiece(p,i,fmt));
+  return out;
+}
+
+let sizeTimer = null;
+function queueSize(){
+  clearTimeout(sizeTimer);
+  const p = preset();
+  $('pieceList').innerHTML = Array.from({length:pieceCount(p)}, (_,i) =>
+    `<div class="pc">${pieceCount(p)>1?i+1:'전체'}<b>…</b></div>`).join('');
+  sizeTimer = setTimeout(async () => {
+    if (!state.img) return;
+    const cur = preset();
+    const res = await buildAll(cur, state.fmt);
+    if (preset().key !== cur.key) return;
+    $('pieceList').innerHTML = res.map((r,i) =>
+      `<div class="pc${r.blob.size>LIMIT?' over':''}">${res.length>1?i+1:'전체'}<b>${fmtBytes(r.blob.size)}</b></div>`).join('');
+    const over = res.filter(r => r.blob.size > LIMIT).length;
+    const minQ = Math.min(...res.map(r => r.quality ?? 1));
+    const m = $('saveMsg');
+    m.className = 'msg' + (over ? ' bad' : '');
+    m.textContent = over
+      ? (state.fmt === 'png'
+          ? `${over}장이 200KB를 넘어. JPG로 바꾸면 자동으로 맞춰줄게.`
+          : `${over}장이 최저 품질에서도 200KB를 넘었어. 더 단순한 원본이 필요해.`)
+      : (state.fmt === 'jpg' && minQ < 0.9 ? `200KB에 맞추려고 품질 ${Math.round(minQ*100)}%까지 낮춰서 저장돼.` : '');
+  }, 300);
+}
+
+/* ---------- ZIP (저장만, 무압축) ---------- */
+const CRC = (() => { const t = new Uint32Array(256);
+  for (let i=0;i<256;i++){ let c=i; for (let k=0;k<8;k++) c = c&1 ? 0xEDB88320^(c>>>1) : c>>>1; t[i]=c>>>0; }
+  return t; })();
+function crc32(u8){ let c = 0xFFFFFFFF; for (let i=0;i<u8.length;i++) c = CRC[(c^u8[i]) & 0xFF] ^ (c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function makeZip(files){
+  const enc = new TextEncoder();
+  const parts = [], central = [];
+  let offset = 0;
+  for (const f of files){
+    const name = enc.encode(f.name), data = f.data, crc = crc32(data);
+    const lh = new Uint8Array(30 + name.length), dv = new DataView(lh.buffer);
+    dv.setUint32(0, 0x04034b50, true); dv.setUint16(4, 20, true); dv.setUint16(6, 0x0800, true);
+    dv.setUint16(8, 0, true); dv.setUint16(10, 0, true); dv.setUint16(12, 0x21, true);
+    dv.setUint32(14, crc, true); dv.setUint32(18, data.length, true); dv.setUint32(22, data.length, true);
+    dv.setUint16(26, name.length, true); dv.setUint16(28, 0, true);
+    lh.set(name, 30);
+    parts.push(lh, data);
+    const ch = new Uint8Array(46 + name.length), cv = new DataView(ch.buffer);
+    cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0x0800, true); cv.setUint16(10, 0, true);
+    cv.setUint16(12, 0, true); cv.setUint16(14, 0x21, true);
+    cv.setUint32(16, crc, true); cv.setUint32(20, data.length, true); cv.setUint32(24, data.length, true);
+    cv.setUint16(28, name.length, true); cv.setUint32(42, offset, true);
+    ch.set(name, 46);
+    central.push(ch);
+    offset += lh.length + data.length;
+  }
+  const cdSize = central.reduce((a,b) => a+b.length, 0);
+  const end = new Uint8Array(22), ev = new DataView(end.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(8, files.length, true); ev.setUint16(10, files.length, true);
+  ev.setUint32(12, cdSize, true); ev.setUint32(16, offset, true);
+  return new Blob([...parts, ...central, end], { type:'application/zip' });
+}
+function download(blob, name){
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+const toU8 = async blob => new Uint8Array(await blob.arrayBuffer());
+
+/* ---------- 파일 로드 ---------- */
+function loadFile(file){
+  if (!file || !file.type.startsWith('image/')){
+    $('drop').querySelector('p').textContent = '이미지 파일만 열 수 있어요. JPG, PNG, GIF, WebP를 골라주세요.'; return;
+  }
+  state.isGif = file.type === 'image/gif';
+  state.srcName = (file.name || 'banner').replace(/\.[^.]+$/,'').slice(0,40) || 'banner';
+  const img = new Image();
+  img.onload = () => {
+    state.img = img; state.tf = {};
+    $('drop').classList.add('hidden'); $('editor').classList.remove('hidden');
+    $('sSrc').textContent = img.naturalWidth+' × '+img.naturalHeight;
+    let m = '드래그로 위치 잡고, 휠이나 슬라이더로 확대해. 방향키 1px, Shift+방향키 10px.';
+    if (img.naturalWidth < 1440 || img.naturalHeight < 450) m += ' 원본이 1440×450보다 작아서 하단 배너는 확대하면 흐려질 수 있어.';
+    if (state.isGif) m += ' GIF는 첫 프레임만 잘려.';
+    $('stageMsg').textContent = m;
+    computeViewScale(); render();
+  };
+  img.onerror = () => { $('drop').querySelector('p').textContent = '이 이미지를 열지 못했어요. 다른 파일로 시도해주세요.'; };
+  img.src = URL.createObjectURL(file);
+}
+
+/* ---------- 이벤트 ---------- */
+const drop = $('drop'), fileInput = $('file');
+drop.addEventListener('click', () => fileInput.click());
+drop.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' '){ e.preventDefault(); fileInput.click(); }});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+['dragenter','dragover'].forEach(ev => document.addEventListener(ev, e => {
+  e.preventDefault(); if ($('editor').classList.contains('hidden')) drop.classList.add('over');
+}));
+['dragleave','drop'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+document.addEventListener('drop', e => { if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+document.addEventListener('paste', e => {
+  const it = [...(e.clipboardData?.items||[])].find(i => i.type.startsWith('image/'));
+  if (it) loadFile(it.getAsFile());
+});
+
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', String(x===t)));
+  state.active = t.dataset.key;
+  if (state.img){ computeViewScale(); render(); }
+}));
+document.querySelectorAll('[data-split]').forEach(b => b.addEventListener('click', () => {
+  state.split = b.dataset.split;
+  document.querySelectorAll('[data-split]').forEach(x => x.setAttribute('aria-pressed', String(x===b)));
+  if (state.img){ computeViewScale(); render(); }
+}));
+document.querySelectorAll('[data-fmt]').forEach(b => b.addEventListener('click', () => {
+  state.fmt = b.dataset.fmt;
+  document.querySelectorAll('[data-fmt]').forEach(x => x.setAttribute('aria-pressed', String(x===b)));
+  queueSize();
+}));
+
+let drag = null;
+stage.addEventListener('pointerdown', e => {
+  stage.setPointerCapture(e.pointerId);
+  const t = tf(); drag = { px:e.clientX, py:e.clientY, ox:t.x, oy:t.y };
+});
+stage.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const p = preset(), t = tf();
+  t.x = drag.ox + (e.clientX-drag.px)/viewScale;
+  t.y = drag.oy + (e.clientY-drag.py)/viewScale;
+  clampTf(p); render();
+});
+['pointerup','pointercancel'].forEach(ev => stage.addEventListener(ev, () => { drag = null; }));
+stage.addEventListener('wheel', e => {
+  e.preventDefault();
+  const r = stage.getBoundingClientRect();
+  zoomAt(e.deltaY<0 ? 1.09 : 1/1.09, (e.clientX-r.left)/viewScale, (e.clientY-r.top)/viewScale);
+}, { passive:false });
+stage.addEventListener('keydown', e => {
+  const map = { ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1] };
+  if (!map[e.key]) return;
+  e.preventDefault();
+  const p = preset(), t = tf(), s = e.shiftKey ? 10 : 1;
+  t.x += map[e.key][0]*s; t.y += map[e.key][1]*s;
+  clampTf(p); render();
+});
+$('zoom').addEventListener('input', e => {
+  const p = preset(), t = tf(), min = coverScale(p);
+  const target = min*(Number(e.target.value)/100), cx = p.w/2, cy = p.h/2;
+  const ix = (cx-t.x)/t.scale, iy = (cy-t.y)/t.scale;
+  t.scale = target; t.x = cx-ix*t.scale; t.y = cy-iy*t.scale;
+  clampTf(p); render();
+});
+$('btnFit').addEventListener('click', () => { fitCover(preset()); render(); });
+$('btnChange').addEventListener('click', () => fileInput.click());
+
+$('btnSave').addEventListener('click', async () => {
+  const btn = $('btnSave'); btn.disabled = true;
+  const p = preset(), res = await buildAll(p, state.fmt);
+  if (res.length === 1){
+    download(res[0].blob, `${state.srcName}_${state.active}_${p.cw}x${p.ch}.${res[0].ext}`);
+  } else {
+    const files = [];
+    for (let i=0;i<res.length;i++)
+      files.push({ name:`${state.srcName}_하단_${String(i+1).padStart(2,'0')}.${res[i].ext}`, data: await toU8(res[i].blob) });
+    download(makeZip(files), `${state.srcName}_하단배너_${p.cols}x${p.rows}.zip`);
+  }
+  btn.disabled = false;
+});
+$('btnSaveAll').addEventListener('click', async () => {
+  const btn = $('btnSaveAll'); btn.disabled = true;
+  const files = [];
+  const fp = { key:'floating|1x1', cw:80, ch:209, cols:1, rows:1, w:80, h:209 };
+  if (!state.tf[fp.key]) fitCover(fp);
+  const f = await buildPiece(fp, 0, state.fmt);
+  files.push({ name:`${state.srcName}_플로팅_80x209.${f.ext}`, data: await toU8(f.blob) });
+  const s = SPLITS[state.split];
+  const bp = { key:'bottom|'+state.split, cw:720, ch:150, cols:s.cols, rows:s.rows, w:720*s.cols, h:150*s.rows };
+  if (!state.tf[bp.key]) fitCover(bp);
+  const res = await buildAll(bp, state.fmt);
+  for (let i=0;i<res.length;i++)
+    files.push({ name:`${state.srcName}_하단_${String(i+1).padStart(2,'0')}.${res[i].ext}`, data: await toU8(res[i].blob) });
+  download(makeZip(files), `${state.srcName}_SOOP배너.zip`);
+  btn.disabled = false;
+});
+
+let rz = null;
+window.addEventListener('resize', () => {
+  clearTimeout(rz);
+  rz = setTimeout(() => { if (state.img){ computeViewScale(); render(); } }, 120);
+});
+})();
+</script>
+</body>
+</html>
