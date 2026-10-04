@@ -334,7 +334,8 @@
     <button class="tab-link" data-target="panelSched">방송 시간표</button>
     <button class="tab-link tab-up" data-target="panelUp">업</button>
     <a class="tab-link tab-viewer" href="/viewer/" target="_blank" rel="noopener">뷰어</a>
-    <a class="tab-link tab-archive" href="/archive/" target="_blank" rel="noopener">아카이브<span class="arc-badge" id="arcBadge"></span></a>
+    <!-- 아카이브 탭 숨김 (페이지는 /archive/ 에 그대로 있음, URL 직접 접근 가능) -->
+    <!-- <a class="tab-link tab-archive" href="/archive/" target="_blank" rel="noopener">아카이브<span class="arc-badge" id="arcBadge"></span></a> -->
   </nav>
 
   <div id="panelCal" class="panel active">
@@ -851,7 +852,8 @@ tabLinks.forEach(btn => {
   window.addEventListener('appinstalled', function(){ bar.style.display = 'none'; modal.style.display = 'none'; });
 })();
 
-// ── 아카이브 배지 (총 개수 + 오늘 new) ─────────────────────
+// ── 아카이브 배지 (총 개수 + 오늘 new) ─── 아카이브 탭 숨김으로 비활성 ───
+/*
 (function(){
   const sb = initSupabase();
   const badge = document.getElementById('arcBadge');
@@ -870,6 +872,7 @@ tabLinks.forEach(btn => {
     }catch(e){}
   })();
 })();
+*/
 
 // ── 업 요청 ────────────────────────────────────────────────
 (function(){
